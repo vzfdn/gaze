@@ -1,0 +1,5 @@
+gaze
+*.out
+*.test
+.vscode/
+media/
