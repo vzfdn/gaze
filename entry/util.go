@@ -2,6 +2,10 @@ package entry
 
 import (
 	"fmt"
+	"log"
+	"os"
+
+	"golang.org/x/term"
 )
 
 // HumanReadableSize converts a size in bytes to a human-readable string with appropriate units.
@@ -36,11 +40,24 @@ func HumanReadableSize(size int64) string {
 	return fmt.Sprintf("%*s", width, sizeStr)
 }
 
-// totalSize returns total size of entries
+// totalSize returns total size of entries.
 func TotalSize(displayEntries []Entry) string {
 	var t int64
 	for _, e := range displayEntries {
 		t += e.info.Size()
 	}
 	return HumanReadableSize(t)
+}
+
+// GetTerminalWidth returns the current terminal width, falling back to 80 if an error occurs or width is invalid.
+func GetTerminalWidth() int {
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		log.Println("Error getting terminal width:", err)
+		return 80 
+	}
+	if width <= 0 {
+		width = 80
+	}
+	return width
 }

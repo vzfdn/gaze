@@ -20,12 +20,12 @@ func (e Entry) Permission() string {
 
 // User returns the user name associated with the fileInfo inside the Entry.
 func (e Entry) User() string {
-	return UnixOwner(e)
+	return FileOwner(e)
 }
 
 // Group returns the group name associated with the fileInfo inside the Entry.
 func (e Entry) Group() string {
-	return UnixGroup(e)
+	return FileGroup(e)
 }
 
 // Time returns the formatted modification time of the Entry.
