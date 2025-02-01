@@ -9,6 +9,7 @@ import (
 
 type Entry struct {
 	info fs.FileInfo
+	path string
 	// 	basename string
 	// ext      string
 }
@@ -61,7 +62,7 @@ func ReadEntries(path string) ([]Entry, error) {
 		if err != nil {
 			return nil, err
 		}
-		e := Entry{info: fileInfo}
+		e := Entry{info: fileInfo, path: path}
 		if *Options.all || e.Name()[0] != '.' {
 			entries = append(entries, e)
 		}

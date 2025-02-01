@@ -39,4 +39,3 @@ func main() {
 // TODO error handling
 // TODO documentation
 // TODO output colorization
-// TODO windows support
