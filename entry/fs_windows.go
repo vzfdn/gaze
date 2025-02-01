@@ -3,69 +3,50 @@
 package entry
 
 import (
-	"syscall"
-	"unsafe"
+	"fmt"
+	"path/filepath"
+
+	"golang.org/x/sys/windows"
 )
 
-var (
-	modadvapi32         = syscall.NewLazyDLL("advapi32.dll")
-	procGetSecurityInfo = modadvapi32.NewProc("GetSecurityInfo")
-)
-
-// Get file owner using Windows SID
-func FileOwner(e Entry) string {
-	path, err := syscall.UTF16PtrFromString(e.info.Name())
-	if err != nil {
-		return ""
-	}
-
-	var sid *syscall.SID
-	var secDesc uintptr
-
-	err = syscall.GetNamedSecurityInfo(
-		path,
-		syscall.SE_FILE_OBJECT,
-		syscall.OWNER_SECURITY_INFORMATION,
-		&sid,
-		nil,
-		nil,
-		nil,
-		&secDesc,
+// FileUserGroup retrieves the file's owner and group names for the given Entry.
+func FileUserGroup(e Entry) string {
+	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
+	sd, err := windows.GetNamedSecurityInfo(
+		filepath.Clean(e.info.Name()),
+		windows.SE_FILE_OBJECT,
+		windows.SECURITY_INFORMATION(securityFlags),
 	)
-
 	if err != nil {
-		return ""
+		return "unknown  unknown"  
 	}
 
-	sidStr, _ := sid.String()
-	return sidStr
+	owner := "unknown"
+	if ownerSid, _, err := sd.Owner(); err == nil && ownerSid != nil {
+		owner = sidToName(ownerSid)
+	} else if ownerSid != nil {
+		owner = ownerSid.String()  
+	}
+
+	group := "unknown"
+	if groupSid, _, err := sd.Group(); err == nil && groupSid != nil {
+		group = sidToName(groupSid)
+	} else if groupSid != nil {
+		group = groupSid.String()  
+	}
+	
+	return fmt.Sprintf("%s  %s", owner, group)
 }
 
-// Get file group using Windows SID
-func FileGroup(e Entry) string {
-	path, err := syscall.UTF16PtrFromString(e.info.Name())
-	if err != nil {
-		return ""
+// sidToName converts a Windows SID into a human-readable account name ("DOMAIN\User").
+func sidToName(sid *windows.SID) string {
+	if sid == nil {
+		return "unknown"  
 	}
 
-	var sid *syscall.SID
-	var secDesc uintptr
-
-	err = syscall.GetNamedSecurityInfo(
-		path,
-		syscall.SE_FILE_OBJECT,
-		syscall.GROUP_SECURITY_INFORMATION,
-		nil,
-		&sid,
-		nil,
-		nil,
-		&secDesc,
-	)
-
+	name, domain, _, err := sid.LookupAccount("")
 	if err != nil {
-		return ""
+		return sid.String() 
 	}
-
-	sidStr, _ := sid.String()
-	return sidStr
+	return fmt.Sprintf("%s\\%s", domain, name)
 }

@@ -11,10 +11,9 @@ func Long(displayEntries []Entry) string {
 	sb.WriteString(line)
 	const pad = 2
 	for _, e := range displayEntries {
-		line = fmt.Sprintf("%s%*s%s%*s%s%*s%s%*s%s%*s%s\n",
+		line = fmt.Sprintf("%s%*s%s%*s%s%*s%s%*s%s\n",
 			e.Permission(), pad, "",
-			e.User(), pad, "",
-			e.Group(), pad, "",
+			e.UserAndGroup(), pad, "",
 			e.Time(), pad, "",
 			HumanReadableSize((e.Size())), pad, "",
 			e.Name(),

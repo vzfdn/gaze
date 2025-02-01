@@ -18,14 +18,9 @@ func (e Entry) Permission() string {
 	return e.info.Mode().String()
 }
 
-// User returns the user name associated with the fileInfo inside the Entry.
-func (e Entry) User() string {
-	return FileOwner(e)
-}
-
-// Group returns the group name associated with the fileInfo inside the Entry.
-func (e Entry) Group() string {
-	return FileGroup(e)
+// User returns the user and group name associated with the fileInfo inside the Entry.
+func (e Entry) UserAndGroup() string {
+	return FileUserGroup(e)
 }
 
 // Time returns the formatted modification time of the Entry.
