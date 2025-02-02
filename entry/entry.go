@@ -20,7 +20,7 @@ func (e Entry) Permission() string {
 }
 
 // User returns the user and group name associated with the fileInfo inside the Entry.
-func (e Entry) UserAndGroup() string {
+func (e Entry) UserAndGroup() (string, string) {
 	return FileUserGroup(e)
 }
 
