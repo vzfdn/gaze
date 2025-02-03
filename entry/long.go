@@ -1,52 +1,69 @@
 package entry
 
 import (
-	"fmt"
-	"strings"
-	"unicode/utf8"
+    "fmt"
+    "strings"
+    "unicode/utf8"
 )
 
-// Long formats and returns a detailed table-like string representation of the given entries.
+type row struct {
+    permission string
+    user       string
+    group      string
+    time       string
+    size       string
+    name       string
+}
+
 func Long(entries []Entry) string {
-	var sb strings.Builder
+    if len(entries) == 0 {
+        return "0 File, 0B\n"
+    }
 
-	// Calculate maximum widths for each column
-	var maxUserLen, maxGroupLen, maxSizeLen, maxTimeLen int
-	for _, e := range entries {
-		user, group := e.UserAndGroup()
-		sizeStr := HumanReadableSize(e.Size()) 
-		timeStr := e.Time()                     
+    rows := make([]row, len(entries))
+    var maxUser, maxGroup, maxTime, maxSize int
 
-		if utf8.RuneCountInString(user) > maxUserLen {
-			maxUserLen = utf8.RuneCountInString(user)
-		}
-		if utf8.RuneCountInString(group) > maxGroupLen {
-			maxGroupLen = utf8.RuneCountInString(group)
-		}
-		if utf8.RuneCountInString(sizeStr) > maxSizeLen {
-			maxSizeLen = utf8.RuneCountInString(sizeStr)
-		}
-		if utf8.RuneCountInString(timeStr) > maxTimeLen {
-			maxTimeLen = utf8.RuneCountInString(timeStr)
-		}
-	}
+    for i, e := range entries {
+        user, group := e.UserAndGroup()
+        timeStr := e.Time()
+        sizeStr := HumanReadableSize(e.Size())
+		
+        rows[i] = row{
+            permission: e.Permission(),
+            user:       user,
+            group:      group,
+            time:       timeStr,
+            size:       sizeStr,
+            name:       e.Name(),
+        }
 
-	// Header line (total files and size)
-	line := fmt.Sprintf("%d File, %s\n", len(entries), TotalSize(entries))
-	sb.WriteString(line)
+        maxUser = max(maxUser, utf8.RuneCountInString(user))
+        maxGroup = max(maxGroup, utf8.RuneCountInString(group))
+        maxTime = max(maxTime, utf8.RuneCountInString(timeStr))
+        maxSize = max(maxSize, utf8.RuneCountInString(sizeStr))
+    }
 
-	for _, e := range entries {
-		user, group := e.UserAndGroup()
-		line = fmt.Sprintf("%s  %-*s  %-*s  %-*s  %-*s  %s\n",
-			e.Permission(),
-			maxUserLen, user,     
-			maxGroupLen, group,   
-			maxTimeLen, e.Time(),  
-			maxSizeLen, HumanReadableSize(e.Size()),  
-			e.Name(),
-		)
-		sb.WriteString(line)
-	}
+    var sb strings.Builder
+    // Write header
+    fmt.Fprintf(&sb, "%d File, %s\n", len(entries), TotalSize(entries))
 
-	return sb.String()
+    for _, r := range rows {
+        fmt.Fprintf(&sb, "%s  %-*s  %-*s  %-*s  %-*s  %s\n",
+            r.permission,
+            maxUser, r.user,
+            maxGroup, r.group,
+            maxTime, r.time,
+            maxSize, r.size,
+            r.name,
+        )
+    }
+
+    return sb.String()
+}
+
+func max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
 }

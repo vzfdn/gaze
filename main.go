@@ -34,8 +34,6 @@ func main() {
 }
 
 // TODO combine functionality
-// TODO listing files
 // TODO adding flags: -m --media  -h --header -s --sort
 // TODO error handling
-// TODO documentation
 // TODO output colorization
