@@ -52,20 +52,19 @@ func (e Entry) Name() string {
 
 // ReadEntries reads and returns a []Entry from the specified path.
 func ReadEntries(path string, showHidden bool) ([]Entry, error) {
-    dirEntries, err := os.ReadDir(path)
+    dirs, err := os.ReadDir(path)
     if err != nil {
         return nil, err
     }
-	
-    entries := make([]Entry, 0, len(dirEntries))
-    for _, de := range dirEntries {
-        info, err := de.Info()
+
+    entries := make([]Entry, 0, len(dirs))
+    for i := range dirs {
+        info, err := dirs[i].Info()
         if err != nil {
             return nil, err
         }
-        
-        name := info.Name()
-        if showHidden || name[0] != '.' {
+
+        if showHidden || info.Name()[0] != '.' {
             entries = append(entries, Entry{
                 info: info,
                 path: path,
