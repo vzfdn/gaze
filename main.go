@@ -2,38 +2,33 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"log"
 
 	"github.com/vzfdn/gaze/entry"
 )
 
 func main() {
-	err := entry.ParseFlags()
+	flgs, err := entry.ParseFlags()
 	if err != nil {
-		fmt.Printf("cannot parse flags: '%v'\n", err)
-		os.Exit(1)
+		log.Fatalf("Failed to parse flags: %v", err)
 	}
 
-	path, err := entry.DirPath()
+	path, err := entry.ResolvePath()
 	if err != nil {
-		fmt.Printf("cannot open directory: '%v'\n", err)
-		os.Exit(1)
+		log.Fatalf("Failed to resolve path: %v", err)
 	}
 
-	entries, err := entry.ReadEntries(path)
+	entries, err := entry.ReadEntries(path, flgs.All)
 	if err != nil {
-		fmt.Printf("cannot read entries: '%v'\n", err)
-		os.Exit(1)
+		log.Fatalf("Failed to read entries: %v", err)
 	}
 
-	output := entry.Format(entries)
-	if _, err = fmt.Fprint(os.Stdout, output); err != nil {
-		fmt.Printf("cannot write to stdout: '%v'\n", err)
-		os.Exit(1)
+	output := entry.Format(entries, flgs)
+	if _, err := fmt.Print(output); err != nil {
+		log.Fatalf("Failed to write output: %v", err)
 	}
 }
 
-// TODO combine functionality
 // TODO adding flags: -m --media  -h --header -s --sort
 // TODO error handling
 // TODO output colorization

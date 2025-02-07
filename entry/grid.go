@@ -5,8 +5,8 @@ import (
 	"unicode/utf8"
 )
 
-// Grid formats and returns a table-like grid string representation of the given entries
-func Grid(entries []Entry) string {
+// RenderGrid formats and returns a table-like grid string representation of the given entries
+func RenderGrid(entries []Entry) string {
 	var names []string
 	var maxLen int
 	for _, e := range entries {

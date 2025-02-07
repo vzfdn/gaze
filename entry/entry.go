@@ -51,23 +51,28 @@ func (e Entry) Name() string {
 }
 
 // ReadEntries reads and returns a []Entry from the specified path.
-func ReadEntries(path string) ([]Entry, error) {
-	dirEntries, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-	entries := make([]Entry, 0, len(dirEntries))
-	for _, de := range dirEntries {
-		fileInfo, err := de.Info()
-		if err != nil {
-			return nil, err
-		}
-		e := Entry{info: fileInfo, path: path}
-		if *Options.all || e.Name()[0] != '.' {
-			entries = append(entries, e)
-		}
-	}
-	return entries, nil
+func ReadEntries(path string, showHidden bool) ([]Entry, error) {
+    dirEntries, err := os.ReadDir(path)
+    if err != nil {
+        return nil, err
+    }
+	
+    entries := make([]Entry, 0, len(dirEntries))
+    for _, de := range dirEntries {
+        info, err := de.Info()
+        if err != nil {
+            return nil, err
+        }
+        
+        name := info.Name()
+        if showHidden || name[0] != '.' {
+            entries = append(entries, Entry{
+                info: info,
+                path: path,
+            })
+        }
+    }
+    return entries, nil
 }
 
 /*type VideoFile struct {
