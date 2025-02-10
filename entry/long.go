@@ -15,6 +15,7 @@ type row struct {
 	name       string
 }
 
+// RenderLong renders a detailed view of file entries, aligned in columns.
 func RenderLong(entries []Entry) string {
 	if len(entries) == 0 {
 		return "0 File, 0B\n"
@@ -61,6 +62,7 @@ func RenderLong(entries []Entry) string {
 	return sb.String()
 }
 
+// max returns the larger of two integers.
 func max(a, b int) int {
 	if a > b {
 		return a

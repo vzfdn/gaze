@@ -33,5 +33,4 @@ func main() {
 }
 
 // TODO adding flags: -m --media  -h --header -s --sort
-// TODO error handling
 // TODO output colorization

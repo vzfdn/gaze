@@ -19,7 +19,7 @@ func (e Entry) Permission() string {
 	return e.info.Mode().String()
 }
 
-// User returns the user and group name associated with the fileInfo inside the Entry.
+// UserAndGroup returns the user and group name associated with the fileInfo inside the Entry.
 func (e Entry) UserAndGroup() (string, string) {
 	return FileUserGroup(e)
 }
@@ -40,7 +40,8 @@ func (e Entry) Size() int64 {
 	return e.info.Size()
 }
 
-// Name returns the file name of the Entry, quoted if it contains special characters or whitespace.
+// Name returns the file name of the Entry,
+// quoted if it contains special characters or whitespace.
 func (e Entry) Name() string {
 	name := e.info.Name()
 	if strings.ContainsAny(name, " \t\n\v\f\r") ||
@@ -52,26 +53,26 @@ func (e Entry) Name() string {
 
 // ReadEntries reads and returns a []Entry from the specified path.
 func ReadEntries(path string, showHidden bool) ([]Entry, error) {
-    dirs, err := os.ReadDir(path)
-    if err != nil {
-        return nil, err
-    }
+	dirs, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
 
-    entries := make([]Entry, 0, len(dirs))
-    for i := range dirs {
-        info, err := dirs[i].Info()
-        if err != nil {
-            return nil, err
-        }
+	entries := make([]Entry, 0, len(dirs))
+	for i := range dirs {
+		info, err := dirs[i].Info()
+		if err != nil {
+			return nil, err
+		}
 
-        if showHidden || info.Name()[0] != '.' {
-            entries = append(entries, Entry{
-                info: info,
-                path: path,
-            })
-        }
-    }
-    return entries, nil
+		if showHidden || info.Name()[0] != '.' {
+			entries = append(entries, Entry{
+				info: info,
+				path: path,
+			})
+		}
+	}
+	return entries, nil
 }
 
 /*type VideoFile struct {

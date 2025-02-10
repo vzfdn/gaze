@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 )
 
-// RenderGrid formats and returns a table-like grid string representation of the given entries
+// RenderGrid formats and returns a table-like grid string representation of the given entries.
 func RenderGrid(entries []Entry) (string, error) {
 	var names []string
 	var maxLen int
@@ -25,6 +25,7 @@ func RenderGrid(entries []Entry) (string, error) {
 	return generateTable(names, maxLen, columns, rows), nil
 }
 
+// generateTable generates a formatted table string from a slice of names.
 func generateTable(names []string, maxLen, columns, rows int) string {
 	var sb strings.Builder
 	if columns == 1 {
@@ -56,6 +57,7 @@ func generateTable(names []string, maxLen, columns, rows int) string {
 	return sb.String()
 }
 
+// getTableDimensions calculates the optimal number of columns and rows for a table.
 func getTableDimensions(width int, maxLen int, entriesLen int) (int, int) {
 	cols := width / maxLen
 	if cols == 0 {

@@ -7,16 +7,17 @@ import (
 	"golang.org/x/term"
 )
 
-// HumanReadableSize converts a size in bytes to a human-readable string with appropriate units.
+// HumanReadableSize converts a size in bytes to a human-readable
+// string with appropriate units.
 func HumanReadableSize(size int64) string {
 	const (
-		_     = 1 << (iota * 10) // ignore first value
-		K                        // 1024
-		M                        // 1024^2
-		G                        // 1024^3
-		T                        // 1024^4
-		P                        // 1024^5
-		E                        // 1024^6
+		_ = 1 << (iota * 10) // ignore first value
+		K                    // 1024
+		M                    // 1024^2
+		G                    // 1024^3
+		T                    // 1024^4
+		P                    // 1024^5
+		E                    // 1024^6
 	)
 
 	switch {
@@ -46,7 +47,8 @@ func TotalSize(displayEntries []Entry) string {
 	return HumanReadableSize(t)
 }
 
-// GetTerminalWidth returns the current terminal width, falling back to 80 if an error occurs or width is invalid.
+// GetTerminalWidth returns the current terminal width,
+// falling back to 80 if an error occurs or width is invalid.
 func GetTerminalWidth() (int, error) {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
