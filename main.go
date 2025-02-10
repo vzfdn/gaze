@@ -23,7 +23,10 @@ func main() {
 		log.Fatalf("Failed to read entries: %v", err)
 	}
 
-	output := entry.Format(entries, flgs)
+	output, err := entry.Format(entries, flgs)
+	if err != nil {
+		log.Fatalf("Failed to format output: %v", err)
+	}
 	if _, err := fmt.Print(output); err != nil {
 		log.Fatalf("Failed to write output: %v", err)
 	}

@@ -2,7 +2,6 @@ package entry
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"golang.org/x/term"
@@ -48,14 +47,13 @@ func TotalSize(displayEntries []Entry) string {
 }
 
 // GetTerminalWidth returns the current terminal width, falling back to 80 if an error occurs or width is invalid.
-func GetTerminalWidth() int {
+func GetTerminalWidth() (int, error) {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		log.Println("Error getting terminal width:", err)
-		return 80 
+		return 0, fmt.Errorf("cannot determine terminal width: %w", err)
 	}
 	if width <= 0 {
 		width = 80
 	}
-	return width
+	return width, nil
 }

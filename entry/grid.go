@@ -1,12 +1,13 @@
 package entry
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 )
 
 // RenderGrid formats and returns a table-like grid string representation of the given entries
-func RenderGrid(entries []Entry) string {
+func RenderGrid(entries []Entry) (string, error) {
 	var names []string
 	var maxLen int
 	for _, e := range entries {
@@ -16,9 +17,12 @@ func RenderGrid(entries []Entry) string {
 		}
 		names = append(names, e.Name())
 	}
-	tw := GetTerminalWidth()
+	tw, err := GetTerminalWidth()
+	if err != nil {
+		return "", fmt.Errorf("cannot render grid: %w", err)
+	}
 	columns, rows := getTableDimensions(tw, maxLen, len(entries))
-	return generateTable(names, maxLen, columns, rows)
+	return generateTable(names, maxLen, columns, rows), nil
 }
 
 func generateTable(names []string, maxLen, columns, rows int) string {

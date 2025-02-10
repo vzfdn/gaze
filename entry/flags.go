@@ -2,7 +2,6 @@ package entry
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -38,7 +37,7 @@ func ParseFlags() (Flags, error) {
 	}
 
 	if err := f.Parse(args); err != nil {
-		return Flags{}, fmt.Errorf("flags: %w", err)
+		return Flags{}, err
 	}
 
 	return flg, nil
@@ -53,9 +52,9 @@ func ResolvePath() (string, error) {
 }
 
 // Format generates output based on entries and configuration.
-func Format(entries []Entry, flg Flags) string {
+func Format(entries []Entry, flg Flags) (string, error) {
 	if flg.Long {
-		return RenderLong(entries)
+		return RenderLong(entries), nil
 	}
 	return RenderGrid(entries)
 }
