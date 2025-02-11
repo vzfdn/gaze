@@ -32,5 +32,7 @@ func main() {
 	}
 }
 
-// TODO adding flags: -m --media  -h --header -s --sort
+// TODO header mode: fix 'size' position
+// TODO improve error messages
+// TODO adding flags: -m --media -s --sort
 // TODO output colorization

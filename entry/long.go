@@ -16,7 +16,7 @@ type row struct {
 }
 
 // RenderLong renders a detailed view of file entries, aligned in columns.
-func RenderLong(entries []Entry) string {
+func RenderLong(entries []Entry, showHeader bool) string {
 	if len(entries) == 0 {
 		return "0 File, 0B\n"
 	}
@@ -45,8 +45,19 @@ func RenderLong(entries []Entry) string {
 	}
 
 	var sb strings.Builder
-	// Write header
 	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), TotalSize(entries))
+	
+	// Write header row if showHeader is true
+	if showHeader {
+		fmt.Fprintf(&sb, "%s  %-*s  %-*s  %-*s  %-*s  %s\n",
+			"Permission",
+			maxUser, "User",
+			maxGroup, "Group",
+			maxTime, "Date Modified",
+			maxSize, "Size",
+			"Name",
+		)
+	}
 
 	for _, r := range rows {
 		fmt.Fprintf(&sb, "%s  %-*s  %-*s  %-*s  %-*s  %s\n",

@@ -7,9 +7,10 @@ import (
 )
 
 type Flags struct {
-	All  bool
-	Grid bool
-	Long bool
+	All    bool
+	Grid   bool
+	Long   bool
+	Header bool
 }
 
 // ParseFlags parses command-line flags, supporting short and long options.
@@ -23,6 +24,8 @@ func ParseFlags() (Flags, error) {
 	f.BoolVar(&flg.Grid, "grid", flg.Grid, "alias for -g")
 	f.BoolVar(&flg.Long, "l", false, "detailed listing format")
 	f.BoolVar(&flg.Long, "long", flg.Long, "alias for -l")
+	f.BoolVar(&flg.Header, "h", false, "display a header row for each column")
+	f.BoolVar(&flg.Header, "header", flg.Header, "alias for -h")
 
 	args := make([]string, 0, len(os.Args[1:]))
 	for _, arg := range os.Args[1:] {
@@ -53,8 +56,12 @@ func ResolvePath() (string, error) {
 
 // Format generates output based on entries and configuration.
 func Format(entries []Entry, flg Flags) (string, error) {
-	if flg.Long {
-		return RenderLong(entries), nil
+	switch {
+	case flg.Long && flg.Header:
+		return RenderLong(entries, true), nil
+	case flg.Long:
+		return RenderLong(entries, false), nil
+	default:
+		return RenderGrid(entries)
 	}
-	return RenderGrid(entries)
 }
