@@ -8,31 +8,30 @@ import (
 )
 
 func main() {
-	flgs, err := entry.ParseFlags()
+	cfg, f, err := entry.ParseConfig()
 	if err != nil {
-		log.Fatalf("Failed to parse flags: %v", err)
+		log.Fatalf("Error: %v", err)
 	}
 
-	path, err := entry.ResolvePath()
+	path, err := entry.ResolvePath(f)
 	if err != nil {
-		log.Fatalf("Failed to resolve path: %v", err)
+		log.Fatalf("Error resolving path: %v", err)
 	}
 
-	entries, err := entry.ReadEntries(path, flgs.All)
+	entries, err := entry.ReadEntries(path, cfg.All)
 	if err != nil {
-		log.Fatalf("Failed to read entries: %v", err)
+		log.Fatalf("Error reading entries: %v", err)
 	}
 
-	output, err := entry.Format(entries, flgs)
+	output, err := entry.Format(entries, cfg)
 	if err != nil {
-		log.Fatalf("Failed to format output: %v", err)
+		log.Fatalf("Error formatting output: %v", err)
 	}
-	if _, err := fmt.Print(output); err != nil {
-		log.Fatalf("Failed to write output: %v", err)
-	}
+
+	fmt.Print(output)
 }
 
-// TODO header mode: fix 'size' position
+// TODO fix long position
 // TODO improve error messages
 // TODO adding flags: -m --media -s --sort
 // TODO output colorization

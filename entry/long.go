@@ -22,15 +22,16 @@ func RenderLong(entries []Entry, showHeader bool) string {
 	}
 
 	rows := make([]row, len(entries))
-	var maxUser, maxGroup, maxTime, maxSize int
+	var maxPerm, maxUser, maxGroup, maxTime, maxSize int
 
 	for i, e := range entries {
+		permission := e.Permission()
 		user, group := e.UserAndGroup()
 		timeStr := e.Time()
 		sizeStr := HumanReadableSize(e.Size())
 
 		rows[i] = row{
-			permission: e.Permission(),
+			permission: permission,
 			user:       user,
 			group:      group,
 			time:       timeStr,
@@ -38,6 +39,7 @@ func RenderLong(entries []Entry, showHeader bool) string {
 			name:       e.Name(),
 		}
 
+		maxPerm = max(maxPerm, utf8.RuneCountInString(permission))
 		maxUser = max(maxUser, utf8.RuneCountInString(user))
 		maxGroup = max(maxGroup, utf8.RuneCountInString(group))
 		maxTime = max(maxTime, utf8.RuneCountInString(timeStr))
@@ -46,11 +48,11 @@ func RenderLong(entries []Entry, showHeader bool) string {
 
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), TotalSize(entries))
-	
+
 	// Write header row if showHeader is true
 	if showHeader {
-		fmt.Fprintf(&sb, "%s  %-*s  %-*s  %-*s  %-*s  %s\n",
-			"Permission",
+		fmt.Fprintf(&sb, " %-*s  %-*s  %-*s  %-*s  %-*s  %s\n",
+			maxPerm, "Permissions",
 			maxUser, "User",
 			maxGroup, "Group",
 			maxTime, "Date Modified",
@@ -60,8 +62,8 @@ func RenderLong(entries []Entry, showHeader bool) string {
 	}
 
 	for _, r := range rows {
-		fmt.Fprintf(&sb, "%s  %-*s  %-*s  %-*s  %-*s  %s\n",
-			r.permission,
+		fmt.Fprintf(&sb, " %-*s  %-*s  %-*s  %-*s  %-*s  %s\n",
+			maxPerm, r.permission,
 			maxUser, r.user,
 			maxGroup, r.group,
 			maxTime, r.time,
