@@ -7,72 +7,81 @@ import (
 )
 
 type row struct {
-	permission string
-	user       string
-	group      string
-	time       string
-	size       string
-	name       string
+	perms string
+	user  string
+	group string
+	mod   string
+	size  string
+	name  string
+}
+
+type widths struct {
+	perms int
+	user  int
+	group int
+	mod   int
+	size  int
 }
 
 // RenderLong renders a detailed view of file entries, aligned in columns.
+// If showHeader is true, it includes a header row with column names.
+// Returns a formatted string representing the file entries.
 func RenderLong(entries []Entry, showHeader bool) string {
 	if len(entries) == 0 {
 		return "0 File, 0B\n"
 	}
 
-	rows := make([]row, len(entries))
-	var maxPerm, maxUser, maxGroup, maxTime, maxSize int
-
-	for i, e := range entries {
-		permission := e.Permission()
-		user, group := e.UserAndGroup()
-		timeStr := e.Time()
-		sizeStr := HumanReadableSize(e.Size())
-
-		rows[i] = row{
-			permission: permission,
-			user:       user,
-			group:      group,
-			time:       timeStr,
-			size:       sizeStr,
-			name:       e.Name(),
-		}
-
-		maxPerm = max(maxPerm, utf8.RuneCountInString(permission))
-		maxUser = max(maxUser, utf8.RuneCountInString(user))
-		maxGroup = max(maxGroup, utf8.RuneCountInString(group))
-		maxTime = max(maxTime, utf8.RuneCountInString(timeStr))
-		maxSize = max(maxSize, utf8.RuneCountInString(sizeStr))
-	}
-
+	rows, w := processEntries(entries)
 	var sb strings.Builder
+
+	// Write summary line
 	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), TotalSize(entries))
 
-	// Write header row if showHeader is true
+	// write header if requested
 	if showHeader {
-		fmt.Fprintf(&sb, " %-*s  %-*s  %-*s  %-*s  %-*s  %s\n",
-			maxPerm, "Permissions",
-			maxUser, "User",
-			maxGroup, "Group",
-			maxTime, "Date Modified",
-			maxSize, "Size",
-			"Name",
-		)
+		writeHeader(&sb, w)
 	}
 
-	for _, r := range rows {
-		fmt.Fprintf(&sb, " %-*s  %-*s  %-*s  %-*s  %-*s  %s\n",
-			maxPerm, r.permission,
-			maxUser, r.user,
-			maxGroup, r.group,
-			maxTime, r.time,
-			maxSize, r.size,
-			r.name,
-		)
+	// write rows
+	for _, row := range rows {
+		writeRow(&sb, row, w)
 	}
 
 	return sb.String()
+}
+
+// processEntries processes the file entries and calculates the maximum column widths.
+// Returns a slice of rows and a struct containing the calculated widths.
+func processEntries(entries []Entry) ([]row, widths) {
+	rows := make([]row, len(entries))
+	w := widths{
+		perms: utf8.RuneCountInString("Permissions"),
+		user:  utf8.RuneCountInString("User"),
+		group: utf8.RuneCountInString("Group"),
+		mod:   utf8.RuneCountInString("Date Modified"),
+		size:  utf8.RuneCountInString("Size"),
+	}
+
+	for i, e := range entries {
+		u, g := e.UserAndGroup()
+		r := row{
+			perms: e.Permission(),
+			user:  u,
+			group: g,
+			mod:   e.Time(),
+			size:  HumanReadableSize(e.Size()),
+			name:  e.Name(),
+		}
+		rows[i] = r
+
+		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
+		w.user = max(w.user, utf8.RuneCountInString(r.user))
+		w.group = max(w.group, utf8.RuneCountInString(r.group))
+		w.mod = max(w.mod, utf8.RuneCountInString(r.mod))
+		w.size = max(w.size, utf8.RuneCountInString(r.size))
+	}
+
+	return rows, w
 }
 
 // max returns the larger of two integers.
@@ -81,4 +90,30 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// writeHeader writes the header row to the strings.Builder.
+// It uses the provided widths to align the column names.
+func writeHeader(sb *strings.Builder, w widths) {
+	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %-*s  %s\n",
+		w.perms, "Permissions",
+		w.user, "User",
+		w.group, "Group",
+		w.mod, "Date Modified",
+		w.size, "Size",
+		"Name",
+	)
+}
+
+// writeRow writes a single file entry row to the strings.Builder.
+// It uses the provided widths to align the row data.
+func writeRow(sb *strings.Builder, r row, w widths) {
+	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %-*s  %s\n",
+		w.perms, r.perms,
+		w.user, r.user,
+		w.group, r.group,
+		w.mod, r.mod,
+		w.size, r.size,
+		r.name,
+	)
 }

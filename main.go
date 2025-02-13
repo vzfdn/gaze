@@ -31,7 +31,6 @@ func main() {
 	fmt.Print(output)
 }
 
-// TODO fix long position
 // TODO improve error messages
-// TODO adding flags: -m --media -s --sort
+// TODO adding flags: -m --media -s --sort -r --recursive
 // TODO output colorization
