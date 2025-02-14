@@ -7,7 +7,7 @@ import (
 )
 
 // RenderGrid formats and returns a table-like grid string representation of the given entries.
-func RenderGrid(entries []Entry) (string, error) {
+func RenderGrid(entries []Entry, cfg Config) (string, error) {
 	var names []string
 	var maxLen int
 	for _, e := range entries {

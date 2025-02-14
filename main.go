@@ -18,7 +18,7 @@ func main() {
 		log.Fatalf("Error resolving path: %v", err)
 	}
 
-	entries, err := entry.ReadEntries(path, cfg.All)
+	entries, err := entry.ReadEntries(path, cfg)
 	if err != nil {
 		log.Fatalf("Error reading entries: %v", err)
 	}
@@ -31,6 +31,6 @@ func main() {
 	fmt.Print(output)
 }
 
-// TODO improve error messages
+// TODO improve godocs
 // TODO adding flags: -m --media -s --sort -r --recursive
 // TODO output colorization

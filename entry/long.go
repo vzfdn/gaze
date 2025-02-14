@@ -24,9 +24,8 @@ type widths struct {
 }
 
 // RenderLong renders a detailed view of file entries, aligned in columns.
-// If showHeader is true, it includes a header row with column names.
 // Returns a formatted string representing the file entries.
-func RenderLong(entries []Entry, showHeader bool) string {
+func RenderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
 		return "0 File, 0B\n"
 	}
@@ -38,7 +37,7 @@ func RenderLong(entries []Entry, showHeader bool) string {
 	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), TotalSize(entries))
 
 	// write header if requested
-	if showHeader {
+	if cfg.Header {
 		writeHeader(&sb, w)
 	}
 

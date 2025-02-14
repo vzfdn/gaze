@@ -52,7 +52,7 @@ func (e Entry) Name() string {
 }
 
 // ReadEntries reads and returns a []Entry from the specified path.
-func ReadEntries(path string, showHidden bool) ([]Entry, error) {
+func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	dirs, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -65,13 +65,14 @@ func ReadEntries(path string, showHidden bool) ([]Entry, error) {
 			return nil, err
 		}
 
-		if showHidden || info.Name()[0] != '.' {
+		if cfg.All || info.Name()[0] != '.' {
 			entries = append(entries, Entry{
 				info: info,
 				path: path,
 			})
 		}
 	}
+	
 	return entries, nil
 }
 

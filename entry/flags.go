@@ -9,10 +9,11 @@ import (
 
 // Config holds the command-line configuration options.
 type Config struct {
-	All    bool
-	Grid   bool
-	Long   bool
-	Header bool
+	All     bool
+	Grid    bool
+	Long    bool
+	Header  bool
+	Recurse bool
 }
 
 // ParseConfig parses command-line flags and returns the configuration.
@@ -28,6 +29,8 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	f.BoolVar(&cfg.Long, "long", cfg.Long, "alias for -l")
 	f.BoolVar(&cfg.Header, "h", false, "display a header row for each column")
 	f.BoolVar(&cfg.Header, "header", cfg.Header, "alias for -h")
+	f.BoolVar(&cfg.Recurse, "R", false, "list subdirectories recursively")
+	f.BoolVar(&cfg.Recurse, "recursive", false, "alias for -R")
 
 	// Split combined short flags (e.g., "-al" → "-a", "-l")
 	args := splitCombinedFlags(os.Args[1:])
@@ -65,12 +68,9 @@ func ResolvePath(f *flag.FlagSet) (string, error) {
 
 // Format generates output based on entries and configuration.
 func Format(entries []Entry, cfg Config) (string, error) {
-	switch {
-	case cfg.Long && cfg.Header:
-		return RenderLong(entries, true), nil
-	case cfg.Long:
-		return RenderLong(entries, false), nil
-	default:
-		return RenderGrid(entries)
+	if cfg.Long {
+		return RenderLong(entries, cfg), nil
+	} else {
+		return RenderGrid(entries, cfg)
 	}
 }
