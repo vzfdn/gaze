@@ -6,8 +6,8 @@ import (
 	"unicode/utf8"
 )
 
-// RenderGrid formats and returns a table-like grid string representation of the given entries.
-func RenderGrid(entries []Entry, cfg Config) (string, error) {
+// renderGrid formats and returns a table-like grid string representation of the given entries.
+func renderGrid(entries []Entry) (string, error) {
 	var names []string
 	var maxLen int
 	for _, e := range entries {
@@ -17,7 +17,7 @@ func RenderGrid(entries []Entry, cfg Config) (string, error) {
 		}
 		names = append(names, e.Name())
 	}
-	tw, err := GetTerminalWidth()
+	tw, err := terminalWidth()
 	if err != nil {
 		return "", fmt.Errorf("cannot render grid: %w", err)
 	}

@@ -8,9 +8,9 @@ import (
 	"syscall"
 )
 
-// FileUserGroup retrieves the file owner and group names for the given Entry.
+// fileUserGroup retrieves the file owner and group names for the given Entry.
 // Falls back to UID/GID if names cannot be resolved.
-func FileUserGroup(e Entry) (string, string) {
+func fileUserGroup(e Entry) (string, string) {
 	stat, ok := e.info.Sys().(*syscall.Stat_t)
 	if !ok {
 		return "0", "0"  

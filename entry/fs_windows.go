@@ -10,9 +10,9 @@ import (
 
 var sidCache = make(map[string]string)  
 
-// FileUserGroup retrieves the file's owner and group names for the given Entry.
+// fileUserGroup retrieves the file's owner and group names for the given Entry.
 // Falls back to SID strings if names cannot be resolved.
-func FileUserGroup(e Entry) (string, string) {
+func fileUserGroup(e Entry) (string, string) {
 	path := filepath.Join(e.path, e.info.Name())
 	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
 

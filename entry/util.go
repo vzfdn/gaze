@@ -7,9 +7,9 @@ import (
 	"golang.org/x/term"
 )
 
-// HumanReadableSize converts a size in bytes to a human-readable
+// humanReadableSize converts a size in bytes to a human-readable
 // string with appropriate units.
-func HumanReadableSize(size int64) string {
+func humanReadableSize(size int64) string {
 	const (
 		_ = 1 << (iota * 10) // ignore first value
 		K                    // 1024
@@ -38,18 +38,18 @@ func HumanReadableSize(size int64) string {
 	}
 }
 
-// TotalSize returns total size of entries.
-func TotalSize(displayEntries []Entry) string {
+// totalSize returns total size of entries.
+func totalSize(displayEntries []Entry) string {
 	var t int64
 	for _, e := range displayEntries {
 		t += e.info.Size()
 	}
-	return HumanReadableSize(t)
+	return humanReadableSize(t)
 }
 
-// GetTerminalWidth returns the current terminal width,
+// terminalWidth returns the current terminal width,
 // falling back to 80 if an error occurs or width is invalid.
-func GetTerminalWidth() (int, error) {
+func terminalWidth() (int, error) {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return 0, fmt.Errorf("cannot determine terminal width: %w", err)

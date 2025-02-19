@@ -23,9 +23,9 @@ type widths struct {
 	size  int
 }
 
-// RenderLong renders a detailed view of file entries, aligned in columns.
+// renderLong renders a detailed view of file entries, aligned in columns.
 // Returns a formatted string representing the file entries.
-func RenderLong(entries []Entry, cfg Config) string {
+func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
 		return "0 File, 0B\n"
 	}
@@ -34,7 +34,7 @@ func RenderLong(entries []Entry, cfg Config) string {
 	var sb strings.Builder
 
 	// Write summary line
-	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), TotalSize(entries))
+	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), totalSize(entries))
 
 	// write header if requested
 	if cfg.Header {
@@ -68,7 +68,7 @@ func processEntries(entries []Entry) ([]row, widths) {
 			user:  u,
 			group: g,
 			mod:   e.Time(),
-			size:  HumanReadableSize(e.Size()),
+			size:  humanReadableSize(e.Size()),
 			name:  e.Name(),
 		}
 		rows[i] = r
