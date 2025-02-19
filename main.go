@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/vzfdn/gaze/entry"
@@ -18,19 +17,14 @@ func main() {
 		log.Fatalf("Error resolving path: %v", err)
 	}
 
-	entries, err := entry.ReadEntries(path, cfg)
+	err = entry.PrintEntries(path, cfg)
 	if err != nil {
-		log.Fatalf("Error reading entries: %v", err)
+		log.Fatalf("Error printing entries: %v", err)
 	}
-
-	output, err := entry.Format(entries, cfg)
-	if err != nil {
-		log.Fatalf("Error formatting output: %v", err)
-	}
-
-	fmt.Print(output)
 }
 
-// TODO improve godocs
-// TODO adding flags: -m --media -s --sort -r --recursive
+// TODO renderLong: total, newline problem
+// TODO improve godocs, error messages
+// TODO symlinks
+// TODO adding flags: -m --media, -s --sort  
 // TODO output colorization

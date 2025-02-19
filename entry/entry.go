@@ -1,8 +1,10 @@
 package entry
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -21,7 +23,7 @@ func (e Entry) Permission() string {
 
 // UserAndGroup returns the user and group name associated with the fileInfo inside the Entry.
 func (e Entry) UserAndGroup() (string, string) {
-	return FileUserGroup(e)
+	return fileUserGroup(e)
 }
 
 // Time returns the formatted modification time of the Entry.
@@ -72,35 +74,46 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 			})
 		}
 	}
-	
+
 	return entries, nil
 }
 
-/*type VideoFile struct {
-	Entry
-	Duration   string
-	Resolution string
-}
-
-func FormatVideoEntries(s []VideoFile) string {
-	pad := 8
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%*sType%*sSize%*sDuration%*sFile name%*s \n",
-		pad/4, "", pad+4, "", pad+1, "", pad, "", pad, ""))
-
-	for _, v := range s {
-		sb.WriteString(fmt.Sprintf("%v%*s%v%*s%v%*s%v\n",
-			v.User, pad, "",
-			FormatSize(v.Size), pad-1, "",
-			v.Duration, pad, "",
-			v.Name))
+// formatEntries generates output based on entries and configuration.
+func formatEntries(entries []Entry, cfg Config) (string, error) {
+	if cfg.Long {
+		return renderLong(entries, cfg), nil
+	} else {
+		return renderGrid(entries)
 	}
-	return sb.String()
 }
 
-type AudioFile struct {
-	Entry
-	Duration string
-	Bitrate  string
+// PrintEntries prints entries (and recurses if needed) to stdout.
+func PrintEntries(path string, cfg Config) error {
+	entries, err := ReadEntries(path, cfg)
+	if err != nil {
+		return err
+	}
+
+	if cfg.Recurse {
+		fmt.Printf("\n%s:\n", path)
+	}
+
+	output, err := formatEntries(entries, cfg)
+	if err != nil {
+		return err
+	}
+	fmt.Print(output)
+
+	if cfg.Recurse {
+		for i := range entries {
+			if entries[i].info.IsDir() {
+				subDir := filepath.Join(path, entries[i].info.Name())
+				if err := PrintEntries(subDir, cfg); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
-*/

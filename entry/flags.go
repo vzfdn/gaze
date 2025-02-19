@@ -65,12 +65,3 @@ func ResolvePath(f *flag.FlagSet) (string, error) {
 	}
 	return os.Getwd()
 }
-
-// Format generates output based on entries and configuration.
-func Format(entries []Entry, cfg Config) (string, error) {
-	if cfg.Long {
-		return RenderLong(entries, cfg), nil
-	} else {
-		return RenderGrid(entries, cfg)
-	}
-}
