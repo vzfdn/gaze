@@ -4,11 +4,13 @@ package entry
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+
 	"golang.org/x/sys/windows"
 )
 
-var sidCache = make(map[string]string)  
+var sidCache = make(map[string]string)
 
 // fileUserGroup retrieves the file's owner and group names for the given Entry.
 // Falls back to SID strings if names cannot be resolved.
@@ -16,34 +18,30 @@ func fileUserGroup(e Entry) (string, string) {
 	path := filepath.Join(e.path, e.info.Name())
 	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
 
-	// Get security descriptor (fallback to "unknown" on failure)
 	sd, err := windows.GetNamedSecurityInfo(
 		path,
 		windows.SE_FILE_OBJECT,
 		windows.SECURITY_INFORMATION(securityFlags),
 	)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: cannot get security info for %s: %v\n", path, err)
 		return "unknown", "unknown"
 	}
 
 	owner := "unknown"
 	if ownerSid, _, err := sd.Owner(); err == nil && ownerSid != nil {
 		owner = sidToName(ownerSid)
-	} else if ownerSid != nil {
-		owner = ownerSid.String() 
 	}
 
 	group := "unknown"
 	if groupSid, _, err := sd.Group(); err == nil && groupSid != nil {
 		group = sidToName(groupSid)
-	} else if groupSid != nil {
-		group = groupSid.String()  
 	}
 
 	return owner, group
 }
 
-// sidToName converts a Windows SID into a human-readable account name ("DOMAIN\User").
+// sidToName converts a Windows SID into a human-readable account name.
 func sidToName(sid *windows.SID) string {
 	if sid == nil {
 		return "unknown"
@@ -55,12 +53,11 @@ func sidToName(sid *windows.SID) string {
 		return name
 	}
 
-	name, domain, _, err := sid.LookupAccount("")
+	name, _, _, err := sid.LookupAccount("")
 	if err != nil {
 		return sidStr
 	}
 
-	fullName := fmt.Sprintf("%s\\%s", domain, name)
-	sidCache[sidStr] = fullName
-	return fullName
+	sidCache[sidStr] = name
+	return name
 }

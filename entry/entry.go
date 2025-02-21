@@ -57,14 +57,14 @@ func (e Entry) Name() string {
 func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	dirs, err := os.ReadDir(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot access %s: %w", path, err)
 	}
 
 	entries := make([]Entry, 0, len(dirs))
 	for i := range dirs {
 		info, err := dirs[i].Info()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot stat %s/%s: %w", path, dirs[i].Name(), err)
 		}
 
 		if cfg.All || info.Name()[0] != '.' {
@@ -79,37 +79,43 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 }
 
 // formatEntries generates output based on entries and configuration.
+// Uses long format if -l is set, otherwise defaults to grid format.
 func formatEntries(entries []Entry, cfg Config) (string, error) {
+	if cfg.Long && cfg.Grid {
+		fmt.Fprintf(os.Stderr, "warning: -l and -g are mutually exclusive, using long format\n")
+		return renderLong(entries, cfg), nil
+	}
+
 	if cfg.Long {
 		return renderLong(entries, cfg), nil
-	} else {
-		return renderGrid(entries)
 	}
+
+	return renderGrid(entries)
 }
 
 // PrintEntries prints entries (and recurses if needed) to stdout.
 func PrintEntries(path string, cfg Config) error {
 	entries, err := ReadEntries(path, cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", path, err)
 	}
 
 	if cfg.Recurse {
-		fmt.Printf("\n%s:\n", path)
+		fmt.Printf("%s:\n", path)
 	}
 
 	output, err := formatEntries(entries, cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: format error: %w", path, err)
 	}
-	fmt.Print(output)
+	fmt.Println(output)
 
 	if cfg.Recurse {
 		for i := range entries {
 			if entries[i].info.IsDir() {
 				subDir := filepath.Join(path, entries[i].info.Name())
 				if err := PrintEntries(subDir, cfg); err != nil {
-					return err
+					return fmt.Errorf("%s: %w", subDir, err)
 				}
 			}
 		}

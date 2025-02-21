@@ -4,6 +4,7 @@ package entry
 
 import (
 	"fmt"
+	"os"
 	"os/user"
 	"syscall"
 )
@@ -13,18 +14,19 @@ import (
 func fileUserGroup(e Entry) (string, string) {
 	stat, ok := e.info.Sys().(*syscall.Stat_t)
 	if !ok {
-		return "0", "0"  
+		fmt.Fprintf(os.Stderr, "warning: cannot get syscall.Stat_t for %s\n", e.info.Name())
+		return "unknown", "unknown"
 	}
-	
-	uidStr := fmt.Sprint(stat.Uid)
-	usr := uidStr
-	if u, err := user.LookupId(uidStr); err == nil {
+
+	uid := fmt.Sprint(stat.Uid)
+	usr := uid
+	if u, err := user.LookupId(uid); err == nil {
 		usr = u.Username
 	}
 
-	gidStr := fmt.Sprint(stat.Gid)
-	group := gidStr
-	if g, err := user.LookupGroupId(gidStr); err == nil {
+	gid := fmt.Sprint(stat.Gid)
+	group := gid
+	if g, err := user.LookupGroupId(gid); err == nil {
 		group = g.Name
 	}
 

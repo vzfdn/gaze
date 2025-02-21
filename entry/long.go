@@ -27,14 +27,18 @@ type widths struct {
 // Returns a formatted string representing the file entries.
 func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
-		return "0 File, 0B\n"
+		return "total 0\n"
 	}
 
 	rows, w := processEntries(entries)
 	var sb strings.Builder
 
-	// Write summary line
-	fmt.Fprintf(&sb, "%d File, %s\n", len(entries), totalSize(entries))
+	// write summary line  
+	files := "Files"
+	if len(entries) == 1 {
+		files = "File"
+	}
+	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
 
 	// write header if requested
 	if cfg.Header {
@@ -94,7 +98,7 @@ func max(a, b int) int {
 // writeHeader writes the header row to the strings.Builder.
 // It uses the provided widths to align the column names.
 func writeHeader(sb *strings.Builder, w widths) {
-	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %-*s  %s\n",
+	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
 		w.perms, "Permissions",
 		w.user, "User",
 		w.group, "Group",
@@ -107,7 +111,7 @@ func writeHeader(sb *strings.Builder, w widths) {
 // writeRow writes a single file entry row to the strings.Builder.
 // It uses the provided widths to align the row data.
 func writeRow(sb *strings.Builder, r row, w widths) {
-	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %-*s  %s\n",
+	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
 		w.perms, r.perms,
 		w.user, r.user,
 		w.group, r.group,
@@ -115,4 +119,45 @@ func writeRow(sb *strings.Builder, r row, w widths) {
 		w.size, r.size,
 		r.name,
 	)
+}
+
+// humanReadableSize converts a size in bytes to a human-readable string with appropriate units.
+func humanReadableSize(size int64) string {
+	const (
+		_ = 1 << (iota * 10) // Ignore first value
+		K                    // 1024
+		M                    // 1024^2
+		G                    // 1024^3
+		T                    // 1024^4
+		P                    // 1024^5
+		E                    // 1024^6
+	)
+	if size < 0 {
+		size = 0
+	}
+	switch {
+	case size < K:
+		return fmt.Sprintf("%d", size) // Bytes
+	case size < M:
+		return fmt.Sprintf("%.1fK", float64(size)/K) // Kilobytes
+	case size < G:
+		return fmt.Sprintf("%.1fM", float64(size)/M) // Megabytes
+	case size < T:
+		return fmt.Sprintf("%.1fG", float64(size)/G) // Gigabytes
+	case size < P:
+		return fmt.Sprintf("%.1fT", float64(size)/T) // Terabytes
+	case size < E:
+		return fmt.Sprintf("%.1fP", float64(size)/P) // Petabytes
+	default:
+		return fmt.Sprintf("%.1fE", float64(size)/E) // Exabytes
+	}
+}
+
+// totalSize returns the total size of entries in a human-readable format.
+func totalSize(entries []Entry) string {
+	var t int64
+	for _, e := range entries {
+		t += e.info.Size()
+	}
+	return humanReadableSize(t)
 }

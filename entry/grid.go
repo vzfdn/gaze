@@ -2,8 +2,11 @@ package entry
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"unicode/utf8"
+
+	"golang.org/x/term"
 )
 
 // renderGrid formats and returns a table-like grid string representation of the given entries.
@@ -17,10 +20,7 @@ func renderGrid(entries []Entry) (string, error) {
 		}
 		names = append(names, e.Name())
 	}
-	tw, err := terminalWidth()
-	if err != nil {
-		return "", fmt.Errorf("cannot render grid: %w", err)
-	}
+	tw, _ := terminalWidth()
 	columns, rows := getTableDimensions(tw, maxLen, len(entries))
 	return generateTable(names, maxLen, columns, rows), nil
 }
@@ -46,7 +46,7 @@ func generateTable(names []string, maxLen, columns, rows int) string {
 			sb.WriteString(nameStr)
 		}
 		// Print a line break if it's the last column
-		if x+1 == columns {
+		if x+1 == columns && rows != 1 {
 			sb.WriteString("\n")
 		} else {
 			// Padding ensures columns are aligned by adding space between entries
@@ -65,4 +65,18 @@ func getTableDimensions(width int, maxLen int, entriesLen int) (int, int) {
 	}
 	rows := (entriesLen + cols - 1) / cols
 	return cols, rows
+}
+
+// terminalWidth returns the current terminal width,
+// falling back to 80 if an error occurs or width is invalid.
+func terminalWidth() (int, error) {
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot get terminal size: %v\n", err)
+		return 80, nil
+	}
+	if width <= 0 {
+		return 80, nil
+	}
+	return width, nil
 }
