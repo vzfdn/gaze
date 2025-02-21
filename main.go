@@ -1,7 +1,8 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/vzfdn/gaze/entry"
 )
@@ -9,22 +10,25 @@ import (
 func main() {
 	cfg, f, err := entry.ParseConfig()
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		fmt.Printf("Error parsing flags: %v", err)
+		os.Exit(1)
 	}
 
 	path, err := entry.ResolvePath(f)
 	if err != nil {
-		log.Fatalf("Error resolving path: %v", err)
+		fmt.Printf("Error resolving path: %v", err)
+		os.Exit(1)
 	}
 
 	err = entry.PrintEntries(path, cfg)
 	if err != nil {
-		log.Fatalf("Error printing entries: %v", err)
+		fmt.Printf("Error printing entries: %v", err)
+		os.Exit(1)
 	}
 }
 
-// TODO renderLong: total, newline problem
-// TODO improve godocs, error messages
+// TODO refactor renderGrid
+// TODO improve godocs
 // TODO symlinks
-// TODO adding flags: -m --media, -s --sort  
+// TODO adding flags: -m --media, -s --sort
 // TODO output colorization
