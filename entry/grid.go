@@ -9,7 +9,7 @@ import (
 	"golang.org/x/term"
 )
 
-// renderGrid formats and returns a table-like grid string representation of the given entries.
+// renderGrid formats entries as a table-like grid string.
 func renderGrid(entries []Entry) (string, error) {
 	var names []string
 	var maxLen int
@@ -67,12 +67,11 @@ func getTableDimensions(width int, maxLen int, entriesLen int) (int, int) {
 	return cols, rows
 }
 
-// terminalWidth returns the current terminal width,
-// falling back to 80 if an error occurs or width is invalid.
+// terminalWidth returns the current terminal width, falling back to 80 if unavailable.
 func terminalWidth() (int, error) {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot get terminal size: %v\n", err)
+		fmt.Fprintf(os.Stderr, "warning: cannot get terminal size: %v\n", err)
 		return 80, nil
 	}
 	if width <= 0 {

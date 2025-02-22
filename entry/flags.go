@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// Config holds the command-line configuration options.
+// Config holds command-line configuration options.
 type Config struct {
 	All     bool
 	Grid    bool
@@ -32,16 +32,15 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	f.BoolVar(&cfg.Recurse, "R", false, "list subdirectories recursively")
 	f.BoolVar(&cfg.Recurse, "recursive", false, "alias for -R")
 
-	// Split combined short flags (e.g., "-al" → "-a", "-l")
+	// splitCombinedFlags splits combined short flags (e.g., "-al" to "-a -l").
 	args := splitCombinedFlags(os.Args[1:])
 
-	// Parse flags
 	if err := f.Parse(args); err != nil {
 		f.Usage()
-		return Config{}, nil, fmt.Errorf("canno parse flags: %w", err)
+		return Config{}, nil, fmt.Errorf("cannot parse flags: %w", err)
 	}
 
-	// Enforce grid as default if no format specified
+	// Set grid as default if no format flags are provided.
 	if !cfg.Long && !cfg.Grid {
 		cfg.Grid = true
 	}

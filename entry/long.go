@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 )
 
+// row represents a single file entry for long format rendering.
 type row struct {
 	perms string
 	user  string
@@ -15,6 +16,7 @@ type row struct {
 	name  string
 }
 
+// widths holds the maximum column widths for long format rendering.
 type widths struct {
 	perms int
 	user  int
@@ -24,7 +26,6 @@ type widths struct {
 }
 
 // renderLong renders a detailed view of file entries, aligned in columns.
-// Returns a formatted string representing the file entries.
 func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
 		return "total 0\n"
@@ -33,19 +34,17 @@ func renderLong(entries []Entry, cfg Config) string {
 	rows, w := processEntries(entries)
 	var sb strings.Builder
 
-	// write summary line  
+	// Write summary line.
 	files := "Files"
 	if len(entries) == 1 {
 		files = "File"
 	}
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
 
-	// write header if requested
 	if cfg.Header {
 		writeHeader(&sb, w)
 	}
 
-	// write rows
 	for _, row := range rows {
 		writeRow(&sb, row, w)
 	}
@@ -53,8 +52,7 @@ func renderLong(entries []Entry, cfg Config) string {
 	return sb.String()
 }
 
-// processEntries processes the file entries and calculates the maximum column widths.
-// Returns a slice of rows and a struct containing the calculated widths.
+// processEntries processes file entries and calculates maximum column widths.
 func processEntries(entries []Entry) ([]row, widths) {
 	rows := make([]row, len(entries))
 	w := widths{
@@ -95,8 +93,7 @@ func max(a, b int) int {
 	return b
 }
 
-// writeHeader writes the header row to the strings.Builder.
-// It uses the provided widths to align the column names.
+// writeHeader writes the header row to the strings.Builder with aligned columns.
 func writeHeader(sb *strings.Builder, w widths) {
 	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
 		w.perms, "Permissions",
@@ -108,8 +105,7 @@ func writeHeader(sb *strings.Builder, w widths) {
 	)
 }
 
-// writeRow writes a single file entry row to the strings.Builder.
-// It uses the provided widths to align the row data.
+// writeRow writes a single file entry row to the strings.Builder with aligned columns.
 func writeRow(sb *strings.Builder, r row, w widths) {
 	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
 		w.perms, r.perms,
@@ -121,7 +117,7 @@ func writeRow(sb *strings.Builder, r row, w widths) {
 	)
 }
 
-// humanReadableSize converts a size in bytes to a human-readable string with appropriate units.
+// humanReadableSize converts a size in bytes to a human-readable string with units.
 func humanReadableSize(size int64) string {
 	const (
 		_ = 1 << (iota * 10) // Ignore first value
@@ -137,19 +133,19 @@ func humanReadableSize(size int64) string {
 	}
 	switch {
 	case size < K:
-		return fmt.Sprintf("%d", size) // Bytes
+		return fmt.Sprintf("%d", size)  
 	case size < M:
-		return fmt.Sprintf("%.1fK", float64(size)/K) // Kilobytes
+		return fmt.Sprintf("%.1fK", float64(size)/K)  
 	case size < G:
-		return fmt.Sprintf("%.1fM", float64(size)/M) // Megabytes
+		return fmt.Sprintf("%.1fM", float64(size)/M)  
 	case size < T:
-		return fmt.Sprintf("%.1fG", float64(size)/G) // Gigabytes
+		return fmt.Sprintf("%.1fG", float64(size)/G)  
 	case size < P:
-		return fmt.Sprintf("%.1fT", float64(size)/T) // Terabytes
+		return fmt.Sprintf("%.1fT", float64(size)/T)  
 	case size < E:
-		return fmt.Sprintf("%.1fP", float64(size)/P) // Petabytes
+		return fmt.Sprintf("%.1fP", float64(size)/P) 
 	default:
-		return fmt.Sprintf("%.1fE", float64(size)/E) // Exabytes
+		return fmt.Sprintf("%.1fE", float64(size)/E) 
 	}
 }
 

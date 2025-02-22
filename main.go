@@ -10,21 +10,21 @@ import (
 func main() {
 	cfg, f, err := entry.ParseConfig()
 	if err != nil {
-		fmt.Printf("Error parsing flags: %v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
 	path, err := entry.ResolvePath(f)
 	if err != nil {
-		fmt.Printf("Error resolving path: %v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
 	err = entry.PrintEntries(path, cfg)
 	if err != nil {
-		fmt.Printf("Error printing entries: %v", err)
-		os.Exit(1)
+		os.Exit(2)
 	}
+	os.Exit(0)
 }
 
 // TODO refactor renderGrid
