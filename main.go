@@ -27,8 +27,6 @@ func main() {
 	os.Exit(0)
 }
 
-// TODO refactor renderGrid
-// TODO improve godocs
 // TODO symlinks
 // TODO adding flags: -m --media, -s --sort
 // TODO output colorization
