@@ -8,17 +8,12 @@ import (
 
 // row represents a single file entry for long format rendering.
 type row struct {
-	perms    string
-	user     string
-	group    string
-	modTime  string
-	size     string
-	name     string
-	permsLen int // Cached lengths
-	userLen  int
-	groupLen int
-	modLen   int
-	sizeLen  int
+	perms   string
+	user    string
+	group   string
+	modTime string
+	size    string
+	name    string
 }
 
 // widths holds the maximum column widths for long format rendering.
@@ -36,27 +31,41 @@ func renderLong(entries []Entry, cfg Config) string {
 		return "total 0\n"
 	}
 
-	rows, widths := processEntries(entries)
+	rows, w := processEntries(entries)
+
 	var sb strings.Builder
-	// Preallocate approximate capacity: summary + headers + rows
-	sb.Grow(20 + (len(entries)+1)*(widths.perms+widths.user+widths.group+widths.mod+widths.size+20))
+	// Preallocate approximate capacity
+	sb.Grow(20 + len(entries)*(w.perms+w.user+w.group+w.mod+w.size+20))
 
-	// Write summary line.
-	total := totalSize(entries)
-	fmt.Fprintf(&sb, "total %s\n", total)
-
+	// Summary with file count
 	files := "Files"
 	if len(entries) == 1 {
 		files = "File"
 	}
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
 
+	// Header
 	if cfg.Header {
-		writeHeader(&sb, widths)
+		fmt.Fprintf(&sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
+			w.perms, "Permissions",
+			w.user, "User",
+			w.group, "Group",
+			w.mod, "Modified",
+			w.size, "Size",
+			"Name",
+		)
 	}
 
+	// Rows
 	for _, r := range rows {
-		writeRow(&sb, r, widths)
+		fmt.Fprintf(&sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
+			w.perms, r.perms,
+			w.user, r.user,
+			w.group, r.group,
+			w.mod, r.modTime,
+			w.size, r.size,
+			r.name,
+		)
 	}
 
 	return sb.String()
@@ -64,7 +73,7 @@ func renderLong(entries []Entry, cfg Config) string {
 
 // processEntries processes file entries and calculates maximum column widths.
 func processEntries(entries []Entry) ([]row, widths) {
-	rows := make([]row, len(entries))
+	rows := make([]row, 0, len(entries))
 	w := widths{
 		perms: utf8.RuneCountInString("Permissions"),
 		user:  utf8.RuneCountInString("User"),
@@ -73,7 +82,7 @@ func processEntries(entries []Entry) ([]row, widths) {
 		size:  utf8.RuneCountInString("Size"),
 	}
 
-	for i, e := range entries {
+	for _, e := range entries {
 		u, g := e.UserAndGroup()
 		r := row{
 			perms:   e.Permission(),
@@ -83,19 +92,12 @@ func processEntries(entries []Entry) ([]row, widths) {
 			size:    humanReadableSize(e.Size()),
 			name:    e.Name(),
 		}
-		// Cache lengths to avoid recomputation
-		r.permsLen = utf8.RuneCountInString(r.perms)
-		r.userLen = utf8.RuneCountInString(r.user)
-		r.groupLen = utf8.RuneCountInString(r.group)
-		r.modLen = utf8.RuneCountInString(r.modTime)
-		r.sizeLen = utf8.RuneCountInString(r.size)
-
-		w.perms = max(w.perms, r.permsLen)
-		w.user = max(w.user, r.userLen)
-		w.group = max(w.group, r.groupLen)
-		w.mod = max(w.mod, r.modLen)
-		w.size = max(w.size, r.sizeLen)
-		rows[i] = r
+		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
+		w.user = max(w.user, utf8.RuneCountInString(r.user))
+		w.group = max(w.group, utf8.RuneCountInString(r.group))
+		w.mod = max(w.mod, utf8.RuneCountInString(r.modTime))
+		w.size = max(w.size, utf8.RuneCountInString(r.size))
+		rows = append(rows, r)
 	}
 
 	return rows, w
@@ -107,30 +109,6 @@ func max(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// writeHeader writes the header row to the strings.Builder with aligned columns.
-func writeHeader(sb *strings.Builder, w widths) {
-	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
-		w.perms, "Permissions",
-		w.user, "User",
-		w.group, "Group",
-		w.mod, "Modified",
-		w.size, "Size",
-		"Name",
-	)
-}
-
-// writeRow writes a single file entry row to the strings.Builder with aligned columns.
-func writeRow(sb *strings.Builder, r row, w widths) {
-	fmt.Fprintf(sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
-		w.perms, r.perms,
-		w.user, r.user,
-		w.group, r.group,
-		w.mod, r.modTime,
-		w.size, r.size,
-		r.name,
-	)
 }
 
 // humanReadableSize converts a size in bytes to a human-readable string with units.
