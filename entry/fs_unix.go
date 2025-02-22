@@ -9,7 +9,10 @@ import (
 	"syscall"
 )
 
-// fileUserGroup retrieves the file owner and group names for the given Entry.
+var uidCache = make(map[string]string)
+var gidCache = make(map[string]string)
+
+// fileUserGroup retrieves the file owner and group names for the Entry.
 // Falls back to UID/GID if names cannot be resolved.
 func fileUserGroup(e Entry) (string, string) {
 	stat, ok := e.info.Sys().(*syscall.Stat_t)
@@ -19,15 +22,27 @@ func fileUserGroup(e Entry) (string, string) {
 	}
 
 	uid := fmt.Sprint(stat.Uid)
-	usr := uid
-	if u, err := user.LookupId(uid); err == nil {
-		usr = u.Username
+	usr, ok := uidCache[uid]
+	if !ok {
+		if u, err := user.LookupId(uid); err == nil {
+			usr = u.Username
+			uidCache[uid] = usr
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: cannot resolve UID %s: %v\n", uid, err)
+			usr = uid
+		}
 	}
 
 	gid := fmt.Sprint(stat.Gid)
-	group := gid
-	if g, err := user.LookupGroupId(gid); err == nil {
-		group = g.Name
+	group, ok := gidCache[gid]
+	if !ok {
+		if g, err := user.LookupGroupId(gid); err == nil {
+			group = g.Name
+			gidCache[gid] = group
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: cannot resolve GID %s: %v\n", gid, err)
+			group = gid
+		}
 	}
 
 	return usr, group
