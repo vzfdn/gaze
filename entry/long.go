@@ -8,12 +8,17 @@ import (
 
 // row represents a single file entry for long format rendering.
 type row struct {
-	perms string
-	user  string
-	group string
-	mod   string
-	size  string
-	name  string
+	perms    string
+	user     string
+	group    string
+	modTime  string
+	size     string
+	name     string
+	permsLen int // Cached lengths
+	userLen  int
+	groupLen int
+	modLen   int
+	sizeLen  int
 }
 
 // widths holds the maximum column widths for long format rendering.
@@ -31,10 +36,15 @@ func renderLong(entries []Entry, cfg Config) string {
 		return "total 0\n"
 	}
 
-	rows, w := processEntries(entries)
+	rows, widths := processEntries(entries)
 	var sb strings.Builder
+	// Preallocate approximate capacity: summary + headers + rows
+	sb.Grow(20 + (len(entries)+1)*(widths.perms+widths.user+widths.group+widths.mod+widths.size+20))
 
 	// Write summary line.
+	total := totalSize(entries)
+	fmt.Fprintf(&sb, "total %s\n", total)
+
 	files := "Files"
 	if len(entries) == 1 {
 		files = "File"
@@ -42,11 +52,11 @@ func renderLong(entries []Entry, cfg Config) string {
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
 
 	if cfg.Header {
-		writeHeader(&sb, w)
+		writeHeader(&sb, widths)
 	}
 
-	for _, row := range rows {
-		writeRow(&sb, row, w)
+	for _, r := range rows {
+		writeRow(&sb, r, widths)
 	}
 
 	return sb.String()
@@ -66,20 +76,26 @@ func processEntries(entries []Entry) ([]row, widths) {
 	for i, e := range entries {
 		u, g := e.UserAndGroup()
 		r := row{
-			perms: e.Permission(),
-			user:  u,
-			group: g,
-			mod:   e.Time(),
-			size:  humanReadableSize(e.Size()),
-			name:  e.Name(),
+			perms:   e.Permission(),
+			user:    u,
+			group:   g,
+			modTime: e.Time(),
+			size:    humanReadableSize(e.Size()),
+			name:    e.Name(),
 		}
-		rows[i] = r
+		// Cache lengths to avoid recomputation
+		r.permsLen = utf8.RuneCountInString(r.perms)
+		r.userLen = utf8.RuneCountInString(r.user)
+		r.groupLen = utf8.RuneCountInString(r.group)
+		r.modLen = utf8.RuneCountInString(r.modTime)
+		r.sizeLen = utf8.RuneCountInString(r.size)
 
-		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
-		w.user = max(w.user, utf8.RuneCountInString(r.user))
-		w.group = max(w.group, utf8.RuneCountInString(r.group))
-		w.mod = max(w.mod, utf8.RuneCountInString(r.mod))
-		w.size = max(w.size, utf8.RuneCountInString(r.size))
+		w.perms = max(w.perms, r.permsLen)
+		w.user = max(w.user, r.userLen)
+		w.group = max(w.group, r.groupLen)
+		w.mod = max(w.mod, r.modLen)
+		w.size = max(w.size, r.sizeLen)
+		rows[i] = r
 	}
 
 	return rows, w
@@ -99,7 +115,7 @@ func writeHeader(sb *strings.Builder, w widths) {
 		w.perms, "Permissions",
 		w.user, "User",
 		w.group, "Group",
-		w.mod, "Date Modified",
+		w.mod, "Modified",
 		w.size, "Size",
 		"Name",
 	)
@@ -111,7 +127,7 @@ func writeRow(sb *strings.Builder, r row, w widths) {
 		w.perms, r.perms,
 		w.user, r.user,
 		w.group, r.group,
-		w.mod, r.mod,
+		w.mod, r.modTime,
 		w.size, r.size,
 		r.name,
 	)
@@ -133,19 +149,19 @@ func humanReadableSize(size int64) string {
 	}
 	switch {
 	case size < K:
-		return fmt.Sprintf("%d", size)  
+		return fmt.Sprintf("%d", size)
 	case size < M:
-		return fmt.Sprintf("%.1fK", float64(size)/K)  
+		return fmt.Sprintf("%.1fK", float64(size)/K)
 	case size < G:
-		return fmt.Sprintf("%.1fM", float64(size)/M)  
+		return fmt.Sprintf("%.1fM", float64(size)/M)
 	case size < T:
-		return fmt.Sprintf("%.1fG", float64(size)/G)  
+		return fmt.Sprintf("%.1fG", float64(size)/G)
 	case size < P:
-		return fmt.Sprintf("%.1fT", float64(size)/T)  
+		return fmt.Sprintf("%.1fT", float64(size)/T)
 	case size < E:
-		return fmt.Sprintf("%.1fP", float64(size)/P) 
+		return fmt.Sprintf("%.1fP", float64(size)/P)
 	default:
-		return fmt.Sprintf("%.1fE", float64(size)/E) 
+		return fmt.Sprintf("%.1fE", float64(size)/E)
 	}
 }
 
