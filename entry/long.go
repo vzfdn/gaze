@@ -46,7 +46,7 @@ func renderLong(entries []Entry, cfg Config) string {
 
 	// Header
 	if cfg.Header {
-		fmt.Fprintf(&sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
+		fmt.Fprintf(&sb, " %-*s %-*s %-*s %-*s %*s %s\n",
 			w.perms, "Permissions",
 			w.user, "User",
 			w.group, "Group",
@@ -58,7 +58,7 @@ func renderLong(entries []Entry, cfg Config) string {
 
 	// Rows
 	for _, r := range rows {
-		fmt.Fprintf(&sb, " %-*s  %-*s %-*s  %-*s  %*s  %s\n",
+		fmt.Fprintf(&sb, " %-*s %-*s %-*s %-*s %*s %s\n",
 			w.perms, r.perms,
 			w.user, r.user,
 			w.group, r.group,
