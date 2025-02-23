@@ -20,7 +20,6 @@ type Config struct {
 func ParseConfig() (Config, *flag.FlagSet, error) {
 	var cfg Config
 	f := flag.NewFlagSet(filepath.Base(os.Args[0]), flag.ContinueOnError)
-
 	f.BoolVar(&cfg.All, "a", false, "include hidden entries")
 	f.BoolVar(&cfg.All, "all", false, "alias for -a")
 	f.BoolVar(&cfg.Grid, "g", false, "display as grid (default)")
@@ -36,8 +35,7 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	args := splitCombinedFlags(os.Args[1:])
 
 	if err := f.Parse(args); err != nil {
-		f.Usage()
-		return Config{}, nil, fmt.Errorf("cannot parse flags: %w", err)
+		return Config{}, nil, err
 	}
 
 	// Set grid as default if no format flags are provided.
