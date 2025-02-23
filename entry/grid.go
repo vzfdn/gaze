@@ -11,7 +11,7 @@ import (
 // renderGrid formats entries into a grid string based on terminal width.
 func renderGrid(entries []Entry) (string, error) {
 	names := make([]string, 0, len(entries))
-	maxNameLen := 0
+	var maxNameLen int
 	for _, entry := range entries {
 		name := entry.Name()
 		nameLen := utf8.RuneCountInString(name)
@@ -37,7 +37,7 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 			sb.WriteString(name)
 			sb.WriteByte('\n')
 		}
-		return sb.String()  
+		return sb.String()
 	}
 
 	for row := 0; row < rows; row++ {
