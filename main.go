@@ -10,7 +10,7 @@ import (
 func main() {
 	cfg, f, err := entry.ParseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		// f.Parse already printed error and usage to os.Stderr, just exit
 		os.Exit(1)
 	}
 
