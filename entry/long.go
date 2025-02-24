@@ -42,7 +42,7 @@ func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 1 {
 		files = "File"
 	}
-	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
+	fmt.Fprintf(&sb, " %d %s, %s\n", len(entries), files, totalSize(entries))
 
 	// Header
 	if cfg.Header {
@@ -58,14 +58,7 @@ func renderLong(entries []Entry, cfg Config) string {
 
 	// Rows
 	for _, r := range rows {
-		fmt.Fprintf(&sb, " %-*s %-*s %-*s %-*s %*s %s\n",
-			w.perms, r.perms,
-			w.user, r.user,
-			w.group, r.group,
-			w.mod, r.modTime,
-			w.size, r.size,
-			r.name,
-		)
+		writeRow(&sb, r, w)
 	}
 
 	return sb.String()
@@ -109,6 +102,22 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// writeRow writes a single file entry row to the strings.Builder with aligned columns.
+func writeRow(sb *strings.Builder, r row, w widths) {
+	namePrefix := " "
+	if strings.HasPrefix(r.name, "'") {
+		namePrefix = ""
+	}
+	fmt.Fprintf(sb, " %-*s %-*s %-*s %-*s %*s %s%s\n",
+		w.perms, r.perms,
+		w.user, r.user,
+		w.group, r.group,
+		w.mod, r.modTime,
+		w.size, r.size,
+		namePrefix, r.name,
+	)
 }
 
 // humanReadableSize converts a size in bytes to a human-readable string with units.
