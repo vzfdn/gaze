@@ -26,7 +26,7 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	f.BoolVar(&cfg.Grid, "grid", false, "alias for -g")
 	f.BoolVar(&cfg.Long, "l", false, "detailed listing format")
 	f.BoolVar(&cfg.Long, "long", false, "alias for -l")
-	f.BoolVar(&cfg.Header, "h", false, "display a header row for each column")
+	f.BoolVar(&cfg.Header, "h", false, "show a header row for long format columns")
 	f.BoolVar(&cfg.Header, "header", false, "alias for -h")
 	f.BoolVar(&cfg.Recurse, "R", false, "list subdirectories recursively")
 	f.BoolVar(&cfg.Recurse, "recursive", false, "alias for -R")
