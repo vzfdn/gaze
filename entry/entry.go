@@ -13,8 +13,6 @@ import (
 type Entry struct {
 	info fs.FileInfo
 	path string
-	// 	basename string
-	// ext      string
 }
 
 // Permission returns the file permissions of the Entry as a string.

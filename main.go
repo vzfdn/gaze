@@ -26,7 +26,3 @@ func main() {
 	}
 	os.Exit(0)
 }
-
-// TODO symlinks
-// TODO adding flags: -m --media, -s --sort
-// TODO output colorization
