@@ -1,19 +1,24 @@
+# gaze
 
-gaze
-----
+gaze is a simple ls-like command-line tool written in go, designed to list directory contents in a grid or detailed format. it works on both unix and windows systems.
 
-gaze is a simple ls-like command-line tool written in Go, designed to list
-directory contents in a grid or detailed format. It works on both Unix and
-Windows systems.
+## Install
 
-Usage
------
+Ensure you have go installed on your system. the simplest way is to run:
+`go install github.com/vzfdn/gaze@latest`
+this downloads, builds, and installs gaze to `$GOPATH/bin` (or `$HOME/go/bin`). ensure it’s in your `$PATH` to run gaze anywhere.
 
-gaze [flags] [path]
+Alternatively, if you want to build it manually from source:
+`git clone https://github.com/vzfdn/gaze.git`
+`cd gaze`
+`go build -o gaze`
+after building manually, you can run it with:
+`./gaze [flags] [path]`.
 
-Examples:
+## Examples
+
 ```*
-$ gaze -lah media/
+$ ./gaze -lah media/
   8 Files, 16.2M
   Permissions User Group Modified        Size Name
   -rw-rw-rw-  Rwin None  Oct 30  2024      40  .file
@@ -25,20 +30,17 @@ $ gaze -lah media/
   drwxrwxrwx  Rwin None  Feb 24 18:07    4.0K  notes
   -rw-rw-rw-  Rwin None  Feb 24 18:21    1.1K  test.txt
 ```
-Flags
------
+## Flags
 
-- -a, --all: show hidden entries (e.g., dot files on Unix)
-- -g, --grid: display entries in a grid layout (default)
-- -l, --long: use detailed listing format (permissions, owner, group, size,
-  time, name)
-- -h, --header: include a header row in long format output
-- -R, --recursive: recursively list subdirectories
+- `-a, --all`: show hidden entries (e.g., dot files on unix)
+- `-g, --grid`: display entries in a grid layout (default)
+- `-l, --long`: use detailed listing format (permissions, owner, group, size, time, name)
+- `-h, --header`: include a header row in long format output
+- `-r, --recursive`: recursively list subdirectories
 
-TODO
-----
-- Symlinks: support displaying symbolic links
-- Sorting: add -s/--sort flag for sorting by name, size, or time
-- Media Metadata: add -m/--media flag to show metadata of media files (e.g.,
-  length)
-- Colorization: enable colored output
+## Todo
+
+- symlinks: support displaying symbolic links
+- sorting: add `-s/--sort` flag for sorting by name, size, or time
+- media metadata: add `-m/--media` flag to show metadata of media files (e.g., length)
+- colorization: enable colored output
