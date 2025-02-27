@@ -1,3 +1,4 @@
+// Package entry provides functionality for listing directory entries with customizable formatting and cross-platform support.
 package entry
 
 import (
@@ -20,9 +21,9 @@ func (e Entry) Permission() string {
 	return e.info.Mode().String()
 }
 
-// UserAndGroup returns the user and group names for the Entry’s file info.
+// UserAndGroup returns the user and group names for the Entry's file info.
 func (e Entry) UserAndGroup() (string, string) {
-	return fileUserGroup(e)
+	return userGroup(e)
 }
 
 // Time returns the formatted modification time of the Entry.
@@ -76,7 +77,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 }
 
 // formatEntries generates output based on entries and configuration.
-// Uses long format if -l is set, otherwise defaults to grid.
+// It uses long format if -l is set, otherwise defaults to grid.
 func formatEntries(entries []Entry, cfg Config) (string, error) {
 	if cfg.Long && cfg.Grid {
 		fmt.Fprintf(os.Stderr, "warning: -l and -g are mutually exclusive, using long format\n")
@@ -90,7 +91,8 @@ func formatEntries(entries []Entry, cfg Config) (string, error) {
 	return renderGrid(entries)
 }
 
-// PrintEntries prints entries to stdout, recursing into subdirectories if configured.
+// PrintEntries prints entries to stdout.
+// It optionally recurses into subdirectories based on Config.Recurse.
 func PrintEntries(path string, cfg Config) error {
 	entries, err := ReadEntries(path, cfg)
 	if err != nil {

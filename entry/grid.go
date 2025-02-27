@@ -8,7 +8,8 @@ import (
 	"unicode/utf8"
 )
 
-// renderGrid formats entries into a grid string based on terminal width.
+// renderGrid formats entries into a grid.
+// It adapts to terminal width for a compact display.
 func renderGrid(entries []Entry) (string, error) {
 	names := make([]string, 0, len(entries))
 	var maxNameLen int
@@ -79,7 +80,8 @@ func getTableDimensions(termWidth, maxNameLen, entryCount int) (columns, rows in
 	return columns, rows
 }
 
-// terminalWidth retrieves the terminal width, falling back to 80 if unavailable.
+// terminalWidth retrieves the terminal width.
+// It falls back to 80 if unavailable.
 func terminalWidth() (int, error) {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {

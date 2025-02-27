@@ -120,7 +120,8 @@ func writeRow(sb *strings.Builder, r row, w widths) {
 	)
 }
 
-// humanReadableSize converts a size in bytes to a human-readable string with units.
+// humanReadableSize converts bytes to a human-readable size.
+// For example, it returns "1.2M" to match tools like ls -h.
 func humanReadableSize(size int64) string {
 	const (
 		_ = 1 << (iota * 10) // Ignore first value

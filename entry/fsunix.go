@@ -12,9 +12,9 @@ import (
 var uidCache = make(map[string]string)
 var gidCache = make(map[string]string)
 
-// fileUserGroup retrieves the file owner and group names for the Entry.
+// userGroup retrieves the file owner and group names for the Entry.
 // Falls back to UID/GID if names cannot be resolved.
-func fileUserGroup(e Entry) (string, string) {
+func userGroup(e Entry) (string, string) {
 	stat, ok := e.info.Sys().(*syscall.Stat_t)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "warning: cannot get syscall.Stat_t for %s\n", e.info.Name())

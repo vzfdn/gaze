@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 )
 
-// fileUserGroup retrieves the file owner and group names for the Entry.
+// userGroup retrieves the file owner and group names for the Entry.
 // Falls back to SID strings if names cannot be resolved.
-func fileUserGroup(e Entry) (string, string) {
+func userGroup(e Entry) (string, string) {
 	sidCache := make(map[string]string) // Local cache per call
 	path := filepath.Join(e.path, e.info.Name())
 	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
