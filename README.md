@@ -20,7 +20,7 @@ Alternatively, to build manually from source:
 ```
 git clone https://github.com/vzfdn/gaze.git
 cd gaze
-go build -o gaze
+go build 
 ```
 
 Then run it with:
