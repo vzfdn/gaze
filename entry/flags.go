@@ -14,12 +14,18 @@ type Config struct {
 	Long    bool
 	Header  bool
 	Recurse bool
+	Size    bool
+	Time    bool
+	Kind    bool
+	Ext     bool
+	Reverse bool
 }
 
 // ParseConfig parses command-line flags and returns the configuration.
 func ParseConfig() (Config, *flag.FlagSet, error) {
 	var cfg Config
 	f := flag.NewFlagSet(filepath.Base(os.Args[0]), flag.ContinueOnError)
+	
 	f.BoolVar(&cfg.All, "a", false, "include hidden entries")
 	f.BoolVar(&cfg.All, "all", false, "alias for -a")
 	f.BoolVar(&cfg.Grid, "g", false, "display as grid (default)")
@@ -30,6 +36,16 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	f.BoolVar(&cfg.Header, "header", false, "alias for -h")
 	f.BoolVar(&cfg.Recurse, "R", false, "list subdirectories recursively")
 	f.BoolVar(&cfg.Recurse, "recursive", false, "alias for -R")
+	f.BoolVar(&cfg.Size, "s", false, "sort by file size")
+	f.BoolVar(&cfg.Size, "size", false, "alias for -s")
+	f.BoolVar(&cfg.Time, "t", false, "sort by modification time")
+	f.BoolVar(&cfg.Time, "time", false, "alias for -t")
+	f.BoolVar(&cfg.Kind, "k", false, "sort by file type (kind)")
+	f.BoolVar(&cfg.Kind, "kind", false, "alias for -k")
+	f.BoolVar(&cfg.Ext, "x", false, "sort by file extension")
+	f.BoolVar(&cfg.Ext, "extension", false, "alias for -x")
+	f.BoolVar(&cfg.Reverse, "r", false, "reverse the sorting order")
+	f.BoolVar(&cfg.Reverse, "reverse", false, "alias for -r")
 
 	// splitCombinedFlags splits combined short flags (e.g., "-al" to "-a -l").
 	args := splitCombinedFlags(os.Args[1:])

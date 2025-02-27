@@ -57,5 +57,6 @@ Then run it with:
 
 - Symlinks: Support displaying symbolic links
 - Sorting: Add `-s/--sort` flag for sorting by name, size, or time
+- Tree: Add `-T --tree` flag to Tree-like recursive view 
 - Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
 - Colorization: Enable colored output
