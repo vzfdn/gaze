@@ -80,19 +80,28 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 // formatEntries generates output based on entries and configuration.
 // It uses long format if -l is set, otherwise defaults to grid.
 func formatEntries(entries []Entry, cfg Config) (string, error) {
-	if cfg.Size {
+	switch {
+	case cfg.Size:
 		sortBySize(entries)
+	case cfg.Time:
+		sortByTime(entries)
+	case cfg.Kind:
+		sortByKind(entries)
+	case cfg.Ext:
+		sortByExt(entries)
 	}
-	
+
+	if cfg.Reverse {
+		reverse(entries)
+	}
+
 	if cfg.Long && cfg.Grid {
 		fmt.Fprintf(os.Stderr, "warning: -l and -g are mutually exclusive, using long format\n")
-		return renderLong(entries, cfg), nil
 	}
 
 	if cfg.Long {
 		return renderLong(entries, cfg), nil
 	}
-
 	return renderGrid(entries)
 }
 
