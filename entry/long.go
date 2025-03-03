@@ -157,7 +157,7 @@ func humanReadableSize(size int64) string {
 func totalSize(entries []Entry) string {
 	var t int64
 	for _, e := range entries {
-		t += e.info.Size()
+		t += e.Size()
 	}
 	return humanReadableSize(t)
 }

@@ -1,4 +1,5 @@
-// Package entry provides functionality for listing directory entries with customizable formatting and cross-platform support.
+// Package entry provides functionality for listing directory entries
+// with customizable formatting and cross-platform support.
 package entry
 
 import (
@@ -79,6 +80,10 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 // formatEntries generates output based on entries and configuration.
 // It uses long format if -l is set, otherwise defaults to grid.
 func formatEntries(entries []Entry, cfg Config) (string, error) {
+	if cfg.Size {
+		sortBySize(entries)
+	}
+	
 	if cfg.Long && cfg.Grid {
 		fmt.Fprintf(os.Stderr, "warning: -l and -g are mutually exclusive, using long format\n")
 		return renderLong(entries, cfg), nil

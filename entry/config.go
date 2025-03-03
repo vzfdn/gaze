@@ -34,7 +34,6 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	cfg := Config{}
 	fs := flag.NewFlagSet(filepath.Base(os.Args[0]), flag.ContinueOnError)
 
-	// Define flags concisely using a slice
 	flags := []boolFlag{
 		{&cfg.All, "a", "all", "include hidden entries"},
 		{&cfg.Grid, "g", "grid", "display as grid (default)"},
@@ -48,19 +47,16 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 		{&cfg.Reverse, "r", "reverse", "reverse the sorting order"},
 	}
 
-	// Register flags efficiently
 	for _, f := range flags {
 		fs.BoolVar(f.ptr, f.shortName, false, f.usage)
 		fs.BoolVar(f.ptr, f.longName, false, "alias for -"+f.shortName)
 	}
 
-	// Parse with optimized argument splitting
 	args := expandShortFlags(os.Args[1:])
 	if err := fs.Parse(args); err != nil {
 		return Config{}, nil, err
 	}
 
-	// Set Grid as default if no format specified
 	if !cfg.Long && !cfg.Grid {
 		cfg.Grid = true
 	}
@@ -68,19 +64,18 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	return cfg, fs, nil
 }
 
-// expandShortFlags splits combined short flags for shorthand input compatibility.
-// For example, it converts "-al" to "-a -l" with optimized allocations.
+// expandShortFlags splits combined short flags (e.g., "-al" to "-a -l").
 func expandShortFlags(args []string) []string {
-	// Estimate capacity: each arg could split into multiple flags
 	result := make([]string, 0, len(args)*2)
 	for _, arg := range args {
+		// Pass through non-flags, long flags, or single "-"
 		if len(arg) < 2 || arg[0] != '-' || arg[1] == '-' {
-			result = append(result, arg) // Pass through lone "-", long flags, or non-flags
+			result = append(result, arg)
 			continue
 		}
-		// Split short flags (e.g., "-al" -> "-a", "-l")
-		for i := 1; i < len(arg); i++ { // Start at 1 to skip initial "-"
-			result = append(result, "-"+string(arg[i]))
+		// Split short flags like "-al" into "-a", "-l"
+		for _, flag := range arg[1:] {
+			result = append(result, "-"+string(flag))
 		}
 	}
 	return result
