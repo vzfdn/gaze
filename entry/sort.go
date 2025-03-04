@@ -2,8 +2,8 @@ package entry
 
 import (
 	"cmp"
+	"path/filepath"
 	"slices"
-	"strings"
 )
 
 // sortBySize sorts entries in descending order by file size.
@@ -36,16 +36,8 @@ func sortByKind(entries []Entry) {
 // sortByExt sorts entries alphabetically by file extension.
 func sortByExt(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
-		return cmp.Compare(getExt(a.Name()), getExt(b.Name()))
+		return cmp.Compare(filepath.Ext(a.Name()), filepath.Ext(b.Name()))
 	})
-}
-
-// getExt returns the file extension or an empty string if none.
-func getExt(name string) string {
-	if dot := strings.LastIndex(name, "."); dot >= 0 {
-		return name[dot:]
-	}
-	return ""
 }
 
 // reverse reverses the order of entries in-place.
