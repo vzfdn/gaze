@@ -14,6 +14,7 @@ type row struct {
 	modTime string
 	size    string
 	name    string
+	target  string
 }
 
 // widths holds the maximum column widths for long format rendering.
@@ -85,6 +86,12 @@ func processEntries(entries []Entry) ([]row, widths) {
 			size:    humanReadableSize(e.Size()),
 			name:    e.Name(),
 		}
+
+		if e.IsSymlink() {
+			r.target = " -> " + e.Target()
+			r.size = humanReadableSize(int64(len(e.Target())))
+		}
+
 		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
 		w.user = max(w.user, utf8.RuneCountInString(r.user))
 		w.group = max(w.group, utf8.RuneCountInString(r.group))
@@ -96,27 +103,26 @@ func processEntries(entries []Entry) ([]row, widths) {
 	return rows, w
 }
 
-// max returns the larger of two integers.
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // writeRow writes a single file entry row to the strings.Builder with aligned columns.
 func writeRow(sb *strings.Builder, r row, w widths) {
 	namePrefix := " "
 	if strings.HasPrefix(r.name, "'") {
 		namePrefix = ""
 	}
+
+	// Append the symlink target to the name if it exists
+	name := r.name
+	if r.target != "" {
+		name += r.target
+	}
+
 	fmt.Fprintf(sb, " %-*s %-*s %-*s %-*s %*s %s%s\n",
 		w.perms, r.perms,
 		w.user, r.user,
 		w.group, r.group,
 		w.mod, r.modTime,
 		w.size, r.size,
-		namePrefix, r.name,
+		namePrefix, name,
 	)
 }
 

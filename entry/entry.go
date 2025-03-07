@@ -52,7 +52,32 @@ func (e Entry) Name() string {
 	return name
 }
 
-// ReadEntries reads and returns a slice of Entries from the specified path.
+// IsSymlink reports whether the entry is a symbolic link.
+func (e Entry) IsSymlink() bool {
+	return e.info.Mode()&os.ModeSymlink != 0
+}
+
+// Target returns the symlink target path or an empty string if not a symlink.
+func (e Entry) Target() string {
+	if !e.IsSymlink() {
+		return ""
+	}
+	target, err := os.Readlink(filepath.Join(e.path, e.info.Name()))
+	if err != nil {
+		return target
+	}
+	return target
+}
+
+// NewEntry creates a new Entry with the given path and file info.
+// The info parameter must not be nil, or an error is returned.
+func NewEntry(path string, info fs.FileInfo) (Entry, error) {
+	if info == nil {
+		return Entry{}, fmt.Errorf("cannot create Entry with nil FileInfo")
+	}
+	return Entry{info, path}, nil
+}
+
 func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	dirs, err := os.ReadDir(path)
 	if err != nil {
@@ -67,10 +92,11 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		}
 
 		if cfg.All || info.Name()[0] != '.' {
-			entries = append(entries, Entry{
-				info: info,
-				path: path,
-			})
+			entry, err := NewEntry(path, info)
+			if err != nil {
+				return nil, err
+			}
+			entries = append(entries, entry)
 		}
 	}
 

@@ -2,10 +2,11 @@ package entry
 
 import (
 	"fmt"
-	"golang.org/x/term"
 	"os"
 	"strings"
 	"unicode/utf8"
+
+	"golang.org/x/term"
 )
 
 // renderGrid formats entries into a grid.
@@ -53,7 +54,7 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 			if col < columns-1 {
 				// Pad to align next column
 				padWidth := maxNameLen - utf8.RuneCountInString(name) + 2
-				for i := 0; i < padWidth; i++ {
+				for range padWidth {
 					sb.WriteByte(' ')
 				}
 			}

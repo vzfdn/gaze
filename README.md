@@ -59,8 +59,8 @@ Then run it with:
 - `-r, --reverse`: Reverse the order of sorting
 
 ## Todo
-
-- Symlinks: Support displaying symbolic links
+- Dereference symlinks `-L --dereference`
+- Use symbols differentiate file types
 - Tree: Add `-T --tree` flag to Tree-like recursive view 
 - Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
 - Colorization: Enable colored output
