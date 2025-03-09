@@ -13,8 +13,9 @@ import (
 
 // Entry represents a file or directory with its metadata.
 type Entry struct {
-	info fs.FileInfo
-	path string
+	info   fs.FileInfo
+	path   string
+	target string
 }
 
 // Permission returns the file permissions of the Entry as a string.
@@ -42,7 +43,8 @@ func (e Entry) Size() int64 {
 	return e.info.Size()
 }
 
-// Name returns the file name of the Entry, quoted if it has special characters or whitespace.
+// Name returns the file name of the Entry,
+// quoted if it has special characters or whitespace.
 func (e Entry) Name() string {
 	name := e.info.Name()
 	if strings.ContainsAny(name, " \t\n\v\f\r") ||
@@ -52,32 +54,8 @@ func (e Entry) Name() string {
 	return name
 }
 
-// IsSymlink reports whether the entry is a symbolic link.
-func (e Entry) IsSymlink() bool {
-	return e.info.Mode()&os.ModeSymlink != 0
-}
-
-// Target returns the symlink target path or an empty string if not a symlink.
-func (e Entry) Target() string {
-	if !e.IsSymlink() {
-		return ""
-	}
-	target, err := os.Readlink(filepath.Join(e.path, e.info.Name()))
-	if err != nil {
-		return target
-	}
-	return target
-}
-
-// NewEntry creates a new Entry with the given path and file info.
-// The info parameter must not be nil, or an error is returned.
-func NewEntry(path string, info fs.FileInfo) (Entry, error) {
-	if info == nil {
-		return Entry{}, fmt.Errorf("cannot create Entry with nil FileInfo")
-	}
-	return Entry{info, path}, nil
-}
-
+// ReadEntries reads directory entries from path, applying Config
+// rules for symlinks and hidden files. Returns entries or error.
 func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	dirs, err := os.ReadDir(path)
 	if err != nil {
@@ -92,14 +70,28 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		}
 
 		if cfg.All || info.Name()[0] != '.' {
-			entry, err := NewEntry(path, info)
-			if err != nil {
-				return nil, err
+			e := Entry{info: info, path: path}
+
+			// Checks if the entry is a symlink
+			if info.Mode()&os.ModeSymlink != 0 {
+				targetPath := filepath.Join(path, info.Name())
+				target, _ := os.Readlink(targetPath)
+
+				if cfg.Dereference {
+					// Dereference symlink and use target's info.
+					if targetInfo, err := os.Stat(targetPath); err == nil {
+						e.info = targetInfo
+					} else {
+						e.target = target // Mark as broken if target is invalid.
+					}
+				} else {
+					e.target = target // Store symlink target without dereferencing.
+				}
 			}
-			entries = append(entries, entry)
+
+			entries = append(entries, e)
 		}
 	}
-
 	return entries, nil
 }
 

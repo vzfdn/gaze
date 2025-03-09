@@ -42,8 +42,8 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 		return sb.String()
 	}
 
-	for row := 0; row < rows; row++ {
-		for col := 0; col < columns; col++ {
+	for row := range rows {
+		for col := range columns {
 			// Map row,col to flat index in names
 			index := row*columns + col
 			if index >= len(names) {

@@ -32,7 +32,7 @@ func renderLong(entries []Entry, cfg Config) string {
 		return "total 0\n"
 	}
 
-	rows, w := processEntries(entries)
+	rows, w := processEntries(entries, cfg)
 
 	var sb strings.Builder
 	// Preallocate approximate capacity
@@ -43,11 +43,11 @@ func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 1 {
 		files = "File"
 	}
-	fmt.Fprintf(&sb, " %d %s, %s\n", len(entries), files, totalSize(entries))
+	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
 
 	// Header
 	if cfg.Header {
-		fmt.Fprintf(&sb, " %-*s %-*s %-*s %-*s %*s %s\n",
+		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %-*s %s\n",
 			w.perms, "Permissions",
 			w.user, "User",
 			w.group, "Group",
@@ -66,13 +66,13 @@ func renderLong(entries []Entry, cfg Config) string {
 }
 
 // processEntries processes file entries and calculates maximum column widths.
-func processEntries(entries []Entry) ([]row, widths) {
+func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 	rows := make([]row, 0, len(entries))
 	w := widths{
 		perms: utf8.RuneCountInString("Permissions"),
 		user:  utf8.RuneCountInString("User"),
 		group: utf8.RuneCountInString("Group"),
-		mod:   utf8.RuneCountInString("Date Modified"),
+		mod:   utf8.RuneCountInString("Modified"),
 		size:  utf8.RuneCountInString("Size"),
 	}
 
@@ -87,10 +87,19 @@ func processEntries(entries []Entry) ([]row, widths) {
 			name:    e.Name(),
 		}
 
-		if e.IsSymlink() {
-			r.target = " -> " + e.Target()
-			r.size = humanReadableSize(int64(len(e.Target())))
-		}
+		if e.target != "" {
+            if cfg.Dereference {
+                r.perms = "----------"
+                r.user = "-"
+                r.group = "-"
+                r.modTime = "-"
+                r.size = "-"
+                r.target = " [nonexist]"
+            } else {
+                r.target = " -> " + e.target
+                r.size = humanReadableSize(int64(len(e.target)))
+            }
+        }
 
 		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
 		w.user = max(w.user, utf8.RuneCountInString(r.user))
@@ -105,24 +114,19 @@ func processEntries(entries []Entry) ([]row, widths) {
 
 // writeRow writes a single file entry row to the strings.Builder with aligned columns.
 func writeRow(sb *strings.Builder, r row, w widths) {
-	namePrefix := " "
-	if strings.HasPrefix(r.name, "'") {
-		namePrefix = ""
-	}
-
 	// Append the symlink target to the name if it exists
 	name := r.name
 	if r.target != "" {
 		name += r.target
 	}
 
-	fmt.Fprintf(sb, " %-*s %-*s %-*s %-*s %*s %s%s\n",
+	fmt.Fprintf(sb, "%-*s %-*s %-*s %-*s %*s %s\n",
 		w.perms, r.perms,
 		w.user, r.user,
 		w.group, r.group,
 		w.mod, r.modTime,
 		w.size, r.size,
-		namePrefix, name,
+		name,
 	)
 }
 

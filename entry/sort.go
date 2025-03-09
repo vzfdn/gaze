@@ -29,14 +29,14 @@ func sortByKind(entries []Entry) {
 		if !a.info.IsDir() && b.info.IsDir() {
 			return 1
 		}
-		return cmp.Compare(a.Name(), b.Name())
+		return cmp.Compare(a.info.Name(), b.info.Name())
 	})
 }
 
 // sortByExt sorts entries alphabetically by file extension.
 func sortByExt(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
-		return cmp.Compare(filepath.Ext(a.Name()), filepath.Ext(b.Name()))
+		return cmp.Compare(filepath.Ext(a.info.Name()), filepath.Ext(b.info.Name()))
 	})
 }
 

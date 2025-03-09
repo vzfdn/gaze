@@ -9,16 +9,17 @@ import (
 
 // Config holds command-line configuration options for directory listing.
 type Config struct {
-	All     bool
-	Grid    bool
-	Long    bool
-	Header  bool
-	Recurse bool
-	Size    bool
-	Time    bool
-	Kind    bool
-	Ext     bool
-	Reverse bool
+	All         bool
+	Grid        bool
+	Long        bool
+	Header      bool
+	Recurse     bool
+	Dereference bool
+	Size        bool
+	Time        bool
+	Kind        bool
+	Ext         bool
+	Reverse     bool
 }
 
 // boolFlag defines a flag with short/long names and a description.
@@ -40,6 +41,7 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 		{&cfg.Long, "l", "long", "detailed listing format"},
 		{&cfg.Header, "h", "header", "show a header row for long format"},
 		{&cfg.Recurse, "R", "recursive", "list subdirectories recursively"},
+		{&cfg.Dereference, "L", "dereference", "show info for the target file, not the symlink"},
 		{&cfg.Size, "s", "size", "sort by file size"},
 		{&cfg.Time, "t", "time", "sort by modification time"},
 		{&cfg.Kind, "k", "kind", "sort by file type (kind)"},
