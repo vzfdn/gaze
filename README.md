@@ -52,6 +52,7 @@ Then run it with:
 - `-l, --long`: Use detailed listing format (permissions, owner, group, size, time, name)
 - `-h, --header`: Include a header row in long format output
 - `-R, --recursive`: Recursively list subdirectories
+- `-L, --dereference`: Show info for the target file, not the symlink
 - `-s, --size`: Sort entries by file size (largest first)
 - `-t, --time`: Sort entries by modification time (newest first)
 - `-k, --kind`: Sort entries by file type (directories first, then files)
@@ -59,7 +60,6 @@ Then run it with:
 - `-r, --reverse`: Reverse the order of sorting
 
 ## Todo
-- Dereference symlinks `-L --dereference`
 - Use symbols differentiate file types
 - Tree: Add `-T --tree` flag to Tree-like recursive view 
 - Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
