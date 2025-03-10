@@ -33,16 +33,16 @@ Then run it with:
 
 <pre>
 > gaze -lash media/
-  8 Files, 16.2M
-  Permissions User Group Modified        Size Name
-  -rw-rw-rw-  rwin rwin  Nov 21  2023   12.5M 'Evanescence - Tourniquet.mp3'
-  -rw-rw-rw-  rwin rwin  Sep 10  2023    2.6M  aesthetic.mp4
-  -rw-rw-rw-  rwin rwin  Dec 15  2022  912.2K  cpumemory.pdf
-  -rw-rw-rw-  rwin rwin  Aug 08  2024  144.8K 'Baldur`s_Gate_3.webp'
-  -rw-rw-rw-  rwin rwin  Apr 10  2024  121.9K  EldenRing.jpg
-  -rw-rw-rw-  rwin rwin  Feb 24 18:21    1.1K  test.txt
-  -rw-rw-rw-  rwin rwin  Oct 30  2024      40  .file
-  drwxrwxrwx  rwin rwin  Feb 24 18:07    4.0K  notes
+8 Files, 16.1M
+Permissions User Group Modified       Size Name
+-rwxrwxrwx  rwin rwin  Nov 21  2023  12.5M 'Evanescence - Tourniquet.mp3'
+-rwxrwxrwx  rwin rwin  Sep 10  2023   2.6M aesthetic.mp4
+-rwxrwxrwx  rwin rwin  Dec 15  2022 912.2K cpumemory.pdf
+-rwxrwxrwx  rwin rwin  Aug 08  2024 144.8K 'Baldur`s_Gate_3.webp'
+drwxrwxrwx  rwin rwin  Feb 24 18:07   4.0K notes
+-rwxrwxrwx  rwin rwin  Feb 24 18:21   1.1K test.txt
+-rwxrwxrwx  rwin rwin  Oct 30  2024     40 .file
+Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
 </pre>
 
 ## Flags

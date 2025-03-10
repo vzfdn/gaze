@@ -47,7 +47,7 @@ func renderLong(entries []Entry, cfg Config) string {
 
 	// Header
 	if cfg.Header {
-		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %-*s %s\n",
+		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %*s %s\n",
 			w.perms, "Permissions",
 			w.user, "User",
 			w.group, "Group",
