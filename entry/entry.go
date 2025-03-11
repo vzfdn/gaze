@@ -54,43 +54,47 @@ func (e Entry) Name() string {
 	return name
 }
 
-// ReadEntries reads directory entries from path, applying Config
-// rules for symlinks and hidden files. Returns entries or error.
+// ReadEntries reads directory entries from path, applying Config rules.
+// Returns a slice of entries or an error if reading fails.
 func ReadEntries(path string, cfg Config) ([]Entry, error) {
-	dirs, err := os.ReadDir(path)
+	des, err := os.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot access %s: %w", path, err)
 	}
 
-	entries := make([]Entry, 0, len(dirs))
-	for i := range dirs {
-		info, err := dirs[i].Info()
+	entries := make([]Entry, 0, len(des))
+	for _, de := range des {
+		info, err := de.Info()
 		if err != nil {
-			return nil, fmt.Errorf("cannot access %s/%s: %w", path, dirs[i].Name(), err)
+			return nil, fmt.Errorf("cannot access %s: %w", filepath.Join(path, de.Name()), err)
 		}
 
-		if cfg.All || info.Name()[0] != '.' {
-			e := Entry{info: info, path: path}
+		// Skip hidden files unless cfg.All is true.
+		if !cfg.All && strings.HasPrefix(info.Name(), ".") {
+			continue
+		}
 
-			// Checks if the entry is a symlink
-			if info.Mode()&os.ModeSymlink != 0 {
-				targetPath := filepath.Join(path, info.Name())
-				target, _ := os.Readlink(targetPath)
+		e := Entry{info: info, path: path}
 
-				if cfg.Dereference {
-					// Dereference symlink and use target's info.
-					if targetInfo, err := os.Stat(targetPath); err == nil {
-						e.info = targetInfo
-					} else {
-						e.target = target // Mark as broken if target is invalid.
-					}
-				} else {
-					e.target = target // Store symlink target without dereferencing.
+		// Process symbolic links.
+		if info.Mode()&os.ModeSymlink != 0 {
+			linkPath := filepath.Join(path, info.Name())
+			target, err := os.Readlink(linkPath)
+			if err != nil {
+				continue
+			}
+			e.target = target
+
+			if cfg.Dereference {
+				// Override with dereferenced info if available
+				if targetInfo, err := os.Stat(linkPath); err == nil {
+					e.info = targetInfo
+					e.target = "" // Clear target when successfully dereferenced
 				}
 			}
-
-			entries = append(entries, e)
 		}
+
+		entries = append(entries, e)
 	}
 	return entries, nil
 }
