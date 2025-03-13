@@ -43,11 +43,26 @@ func (e Entry) Size() int64 {
 	return e.info.Size()
 }
 
-// Name returns the file name of the Entry,
-// quoted if it has special characters or whitespace.
-func (e Entry) Name() string {
+// Indicator returns a classification symbol ("/", "*", or "@")
+// based on the file type (directory, executable, or symlink).
+func (e Entry) Indicator() string {
+	if e.info.IsDir() {
+		return "/"
+	} else if e.info.Mode()&os.ModeSymlink != 0 {
+		return "@"
+	} else if e.info.Mode()&0o111 != 0 {
+		return "*"
+	}
+	return ""
+}
+
+// Name returns the file name, quoted if it contains special characters or
+// whitespace, and appends a classification symbol if cfg.Classify is enabled.
+func (e Entry) Name(cfg Config) string {
 	name := e.info.Name()
-	if strings.ContainsAny(name, " \t\n\v\f\r") ||
+	if cfg.Classify {
+		name += e.Indicator()
+	} else if strings.ContainsAny(name, " \t\n\v\f\r") ||
 		strings.ContainsAny(name, "!@#$%^&*()[]{}<>?/|\\~`") {
 		return "'" + name + "'"
 	}
@@ -77,7 +92,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		e := Entry{info: info, path: path}
 
 		// Process symbolic links.
-		if info.Mode()&os.ModeSymlink != 0 {
+		if e.Indicator() == "@" {
 			linkPath := filepath.Join(path, info.Name())
 			target, err := os.Readlink(linkPath)
 			if err != nil {
@@ -86,10 +101,10 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 			e.target = target
 
 			if cfg.Dereference {
-				// Override with dereferenced info if available
+				// Override with dereferenced info if available.
 				if targetInfo, err := os.Stat(linkPath); err == nil {
 					e.info = targetInfo
-					e.target = "" // Clear target when successfully dereferenced
+					e.target = "" // Clear target when successfully dereferenced.
 				}
 			}
 		}
@@ -124,7 +139,7 @@ func formatEntries(entries []Entry, cfg Config) (string, error) {
 	if cfg.Long {
 		return renderLong(entries, cfg), nil
 	}
-	return renderGrid(entries)
+	return renderGrid(entries, cfg)
 }
 
 // PrintEntries prints entries to stdout.

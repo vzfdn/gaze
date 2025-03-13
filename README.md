@@ -53,6 +53,7 @@ Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
 - `-h, --header`: Include a header row in long format output
 - `-R, --recursive`: Recursively list subdirectories
 - `-L, --dereference`: Show info for the target file, not the symlink
+- `-F, --classify`: Append file type indicators
 - `-s, --size`: Sort entries by file size (largest first)
 - `-t, --time`: Sort entries by modification time (newest first)
 - `-k, --kind`: Sort entries by file type (directories first, then files)
@@ -60,7 +61,6 @@ Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
 - `-r, --reverse`: Reverse the order of sorting
 
 ## Todo
-- Use symbols differentiate file types
 - Tree: Add `-T --tree` flag to Tree-like recursive view 
 - Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
 - Colorization: Enable colored output

@@ -84,7 +84,7 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 			group:   g,
 			modTime: e.Time(),
 			size:    humanReadableSize(e.Size()),
-			name:    e.Name(),
+			name:    e.Name(cfg),
 		}
 
 		if e.target != "" {
