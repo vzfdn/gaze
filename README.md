@@ -53,7 +53,7 @@ Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
 - `-h, --header`: Include a header row in long format output
 - `-R, --recursive`: Recursively list subdirectories
 - `-L, --dereference`: Show info for the target file, not the symlink
-- `-F, --classify`: Append file type indicators
+- `-F, --classify`: Append file type indicators (e.g., / for directories, * for executables, @ for symlinks)
 - `-s, --size`: Sort entries by file size (largest first)
 - `-t, --time`: Sort entries by modification time (newest first)
 - `-k, --kind`: Sort entries by file type (directories first, then files)
