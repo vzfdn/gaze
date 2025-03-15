@@ -14,6 +14,7 @@ type Config struct {
 	Long        bool
 	Header      bool
 	Recurse     bool
+	Tree        bool
 	Classify    bool
 	Dereference bool
 	Size        bool
@@ -43,6 +44,7 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 		{&cfg.Header, "h", "header", "show a header row for long format"},
 		{&cfg.Classify, "F", "classify", "append file type indicators"},
 		{&cfg.Recurse, "R", "recursive", "list subdirectories recursively"},
+		{&cfg.Tree, "T", "tree", "recursively display directory contents as a tree"},
 		{&cfg.Dereference, "L", "dereference", "show info for the target file, not the symlink"},
 		{&cfg.Size, "s", "size", "sort by file size"},
 		{&cfg.Time, "t", "time", "sort by modification time"},
