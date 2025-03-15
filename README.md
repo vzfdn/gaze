@@ -54,7 +54,7 @@ Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
 - `-l, --long`: Use detailed listing format (permissions, owner, group, size, time, name)
 - `-h, --header`: Include a header row in long format output
 - `-R, --recursive`: Recursively list subdirectories
-- `T, --tree`: Recursively display directory contents as a tree-like format
+- `-T, --tree`: Recursively display directory contents as a tree-like format
 - `-L, --dereference`: Show info for the target file, not the symlink
 - `-F, --classify`: Append file type indicators (e.g., / for directories, * for executables, @ for symlinks)
 - `-s, --size`: Sort entries by file size (largest first)
