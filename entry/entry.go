@@ -14,6 +14,7 @@ import (
 // Entry represents a file or directory with its metadata.
 type Entry struct {
 	info   fs.FileInfo
+	name   string
 	path   string
 	target string
 }
@@ -43,42 +44,47 @@ func (e Entry) Size() int64 {
 	return e.info.Size()
 }
 
-// Indicator returns a classification symbol ("/", "*", or "@")
-// based on the file type (directory, executable, or symlink).
-func (e Entry) Indicator() string {
-	if e.info.IsDir() {
-		return "/"
-	} else if e.info.Mode()&os.ModeSymlink != 0 {
-		return "@"
-	} else if e.info.Mode()&0o111 != 0 {
-		return "*"
-	}
-	return ""
-}
+// FormatName formats the file name based on the file type and configuration.
+// It quotes the name if it contains special characters or whitespace,
+// and appends a classification symbol ("/", "*", or "@") if cfg.Classify is enabled.
+func FormatName(info fs.FileInfo, cfg Config) string {
+	name := info.Name()
 
-// Name returns the file name, quoted if it contains special characters or
-// whitespace, and appends a classification symbol if cfg.Classify is enabled.
-func (e Entry) Name(cfg Config) string {
-	name := e.info.Name()
-	if cfg.Classify {
-		name += e.Indicator()
-	} else if strings.ContainsAny(name, " \t\n\v\f\r") ||
-		strings.ContainsAny(name, "!@#$%^&*()[]{}<>?/|\\~`") {
-		return "'" + name + "'"
+	// Determine the indicator symbol.
+	var indicator string
+	switch {
+	case info.IsDir():
+		indicator = "/"
+	case info.Mode()&os.ModeSymlink != 0:
+		indicator = "@"
+	case info.Mode()&0o111 != 0:
+		indicator = "*"
 	}
+
+	// Quote the name if it contains special characters or whitespace.
+	const specialChars = " \t\n\v\f\r!@#$%^&*()[]{}<>?/|\\~`"
+	if strings.ContainsAny(name, specialChars) {
+		name = "'" + name + "'"
+	}
+
+	// Append the indicator if cfg.Classify is enabled.
+	if cfg.Classify {
+		name += indicator
+	}
+
 	return name
 }
 
 // ReadEntries reads directory entries from path, applying Config rules.
 // Returns a slice of entries or an error if reading fails.
 func ReadEntries(path string, cfg Config) ([]Entry, error) {
-	des, err := os.ReadDir(path)
+	dirEntry, err := os.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot access %s: %w", path, err)
 	}
 
-	entries := make([]Entry, 0, len(des))
-	for _, de := range des {
+	entries := make([]Entry, 0, len(dirEntry))
+	for _, de := range dirEntry {
 		info, err := de.Info()
 		if err != nil {
 			return nil, fmt.Errorf("cannot access %s: %w", filepath.Join(path, de.Name()), err)
@@ -89,10 +95,14 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 			continue
 		}
 
-		e := Entry{info: info, path: path}
+		e := Entry{
+			info: info,
+			name: FormatName(info, cfg),
+			path: path,
+		}
 
 		// Process symbolic links.
-		if e.Indicator() == "@" {
+		if info.Mode()&os.ModeSymlink != 0 {
 			linkPath := filepath.Join(path, info.Name())
 			target, err := os.Readlink(linkPath)
 			if err != nil {
@@ -139,7 +149,7 @@ func formatEntries(entries []Entry, cfg Config) (string, error) {
 	if cfg.Long {
 		return renderLong(entries, cfg), nil
 	}
-	return renderGrid(entries, cfg)
+	return renderGrid(entries)
 }
 
 // PrintEntries prints entries to stdout.

@@ -11,11 +11,11 @@ import (
 
 // renderGrid formats entries into a grid.
 // It adapts to terminal width for a compact display.
-func renderGrid(entries []Entry, cfg Config) (string, error) {
+func renderGrid(entries []Entry) (string, error) {
 	names := make([]string, 0, len(entries))
 	var maxNameLen int
-	for _, entry := range entries {
-		name := entry.Name(cfg)
+	for _, e := range entries {
+		name := e.name
 		nameLen := utf8.RuneCountInString(name)
 		if nameLen > maxNameLen {
 			maxNameLen = nameLen
