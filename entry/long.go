@@ -31,20 +31,16 @@ func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
 		return "total 0\n"
 	}
-
 	rows, w := processEntries(entries, cfg)
-
 	var sb strings.Builder
 	// Preallocate approximate capacity
 	sb.Grow(20 + len(entries)*(w.perms+w.user+w.group+w.mod+w.size+20))
-
 	// Summary with file count
 	files := "Files"
 	if len(entries) == 1 {
 		files = "File"
 	}
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
-
 	// Header
 	if cfg.Header {
 		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %*s %s\n",
@@ -56,12 +52,10 @@ func renderLong(entries []Entry, cfg Config) string {
 			"Name",
 		)
 	}
-
 	// Rows
 	for _, r := range rows {
 		writeRow(&sb, r, w)
 	}
-
 	return sb.String()
 }
 
@@ -75,32 +69,29 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 		mod:   utf8.RuneCountInString("Modified"),
 		size:  utf8.RuneCountInString("Size"),
 	}
-
 	for _, e := range entries {
-		u, g := e.UserAndGroup()
+		u, g := e.userAndGroup()
 		r := row{
-			perms:   e.Permission(),
+			perms:   e.permission(),
 			user:    u,
 			group:   g,
-			modTime: e.Time(),
-			size:    humanReadableSize(e.Size()),
+			modTime: e.time(),
+			size:    humanReadableSize(e.size()),
 			name:    e.name,
 		}
-
 		if e.target != "" {
-            if cfg.Dereference {
-                r.perms = "----------"
-                r.user = "-"
-                r.group = "-"
-                r.modTime = "-"
-                r.size = "-"
-                r.target = " [nonexist]"
-            } else {
-                r.target = " -> " + e.target
-                r.size = humanReadableSize(int64(len(e.target)))
-            }
-        }
-
+			if cfg.Dereference {
+				r.perms = "----------"
+				r.user = "-"
+				r.group = "-"
+				r.modTime = "-"
+				r.size = "-"
+				r.target = " [nonexist]"
+			} else {
+				r.target = " -> " + e.target
+				r.size = humanReadableSize(int64(len(e.target)))
+			}
+		}
 		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
 		w.user = max(w.user, utf8.RuneCountInString(r.user))
 		w.group = max(w.group, utf8.RuneCountInString(r.group))
@@ -108,7 +99,6 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 		w.size = max(w.size, utf8.RuneCountInString(r.size))
 		rows = append(rows, r)
 	}
-
 	return rows, w
 }
 
@@ -119,7 +109,6 @@ func writeRow(sb *strings.Builder, r row, w widths) {
 	if r.target != "" {
 		name += r.target
 	}
-
 	fmt.Fprintf(sb, "%-*s %-*s %-*s %-*s %*s %s\n",
 		w.perms, r.perms,
 		w.user, r.user,
@@ -167,7 +156,7 @@ func humanReadableSize(size int64) string {
 func totalSize(entries []Entry) string {
 	var t int64
 	for _, e := range entries {
-		t += e.Size()
+		t += e.size()
 	}
 	return humanReadableSize(t)
 }

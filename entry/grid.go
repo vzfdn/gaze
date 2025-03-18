@@ -22,7 +22,6 @@ func renderGrid(entries []Entry) (string, error) {
 		}
 		names = append(names, name)
 	}
-
 	termWidth, _ := terminalWidth()
 	columns, rows := getTableDimensions(termWidth, maxNameLen, len(names))
 	return generateTable(names, maxNameLen, columns, rows), nil
@@ -33,7 +32,6 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 	var sb strings.Builder
 	// Preallocate capacity for names, padding, and newlines
 	sb.Grow(len(names)*(maxNameLen+2) + rows)
-
 	if columns <= 1 {
 		for _, name := range names {
 			sb.WriteString(name)
@@ -41,7 +39,6 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 		}
 		return sb.String()
 	}
-
 	for row := range rows {
 		for col := range columns {
 			// Map row,col to flat index in names
@@ -61,7 +58,6 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 		}
 		sb.WriteByte('\n')
 	}
-
 	return sb.String()
 }
 
@@ -72,11 +68,9 @@ func getTableDimensions(termWidth, maxNameLen, entryCount int) (columns, rows in
 	if columns < 1 {
 		columns = 1
 	}
-
 	if columns > entryCount {
 		columns = entryCount
 	}
-
 	rows = (entryCount + columns - 1) / columns
 	return columns, rows
 }

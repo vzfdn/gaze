@@ -9,7 +9,7 @@ import (
 // sortBySize sorts entries in descending order by file size.
 func sortBySize(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
-		return cmp.Compare(b.Size(), a.Size())
+		return cmp.Compare(b.size(), a.size())
 	})
 }
 

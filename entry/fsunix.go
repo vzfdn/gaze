@@ -20,7 +20,6 @@ func userGroup(e Entry) (string, string) {
 		fmt.Fprintf(os.Stderr, "warning: cannot get syscall.Stat_t for %s\n", e.info.Name())
 		return "unknown", "unknown"
 	}
-
 	uid := fmt.Sprint(stat.Uid)
 	usr, ok := uidCache[uid]
 	if !ok {
@@ -32,7 +31,6 @@ func userGroup(e Entry) (string, string) {
 			usr = uid
 		}
 	}
-
 	gid := fmt.Sprint(stat.Gid)
 	group, ok := gidCache[gid]
 	if !ok {
@@ -44,6 +42,5 @@ func userGroup(e Entry) (string, string) {
 			group = gid
 		}
 	}
-
 	return usr, group
 }
