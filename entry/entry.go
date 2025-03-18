@@ -131,9 +131,6 @@ func formatEntries(entries []Entry, cfg Config) (string, error) {
 	if cfg.Reverse {
 		reverse(entries)
 	}
-	if cfg.Long && cfg.Grid {
-		fmt.Fprintf(os.Stderr, "warning: -l and -g are mutually exclusive, using long format\n")
-	}
 	if cfg.Long {
 		return renderLong(entries, cfg), nil
 	}
