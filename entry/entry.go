@@ -51,18 +51,23 @@ func PrintEntries(path string, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	if cfg.Recurse {
-		fmt.Printf("%s:\n", path)
+	if cfg.Tree {
+		cfg.Recurse = false
+		entries, err = addTreePrefixes(entries, "", cfg)
+		if err != nil {
+			return err
+		}
 	}
-	output, err := formatEntries(entries, cfg)
+	output, err := render(entries, cfg)
 	if err != nil {
 		return fmt.Errorf("%s: format error: %w", path, err)
 	}
 	fmt.Println(output)
 	if cfg.Recurse {
-		for i := range entries {
-			if entries[i].info.IsDir() {
-				subDir := filepath.Join(path, entries[i].info.Name())
+		for _, e := range entries {
+			if e.info.IsDir() {
+				subDir := filepath.Join(path, e.info.Name())
+				fmt.Printf("%s:\n", subDir)
 				if err := PrintEntries(subDir, cfg); err != nil {
 					return err
 				}
@@ -112,12 +117,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		}
 		entries = append(entries, e)
 	}
-	return entries, nil
-}
-
-// formatEntries generates output based on entries and configuration.
-// It uses long format if -l is set, otherwise defaults to grid.
-func formatEntries(entries []Entry, cfg Config) (string, error) {
+	// Sort entries 
 	switch {
 	case cfg.Size:
 		sortBySize(entries)
@@ -131,10 +131,19 @@ func formatEntries(entries []Entry, cfg Config) (string, error) {
 	if cfg.Reverse {
 		reverse(entries)
 	}
-	if cfg.Long {
-		return renderLong(entries, cfg), nil
-	}
-	return renderGrid(entries)
+	return entries, nil
+}
+
+// render generates output based on entries and configuration.
+// It uses long format if -l is set, otherwise defaults to grid.
+func render(entries []Entry, cfg Config) (string, error) {
+    if cfg.Long {
+        return renderLong(entries, cfg), nil
+    }
+    if cfg.Tree {
+        return renderTree(entries), nil
+    }
+    return renderGrid(entries)
 }
 
 // formatName formats the file name based on the file type and configuration.
@@ -142,21 +151,55 @@ func formatEntries(entries []Entry, cfg Config) (string, error) {
 // and appends a classification symbol ("/", "*", or "@") if cfg.Classify is enabled.
 func formatName(info fs.FileInfo, cfg Config) string {
 	name := info.Name()
-	var indicator string
-	switch {
-	case info.IsDir():
-		indicator = "/"
-	case info.Mode()&os.ModeSymlink != 0:
-		indicator = "@"
-	case info.Mode()&0o111 != 0:
-		indicator = "*"
-	}
-	const specialChars = " \t\n\v\f\r!@#$%^&*()[]{}<>?/|\\~`"
-	if strings.ContainsAny(name, specialChars) {
-		name = "'" + name + "'"
+	if strings.ContainsAny(name, " \t\n\v\f\r!@#$%^&*()[]{}<>?/|\\~`") {
+		name = fmt.Sprintf("'%s'", name)
 	}
 	if cfg.Classify {
-		name += indicator
+		switch {
+		case info.IsDir():
+			name += "/"
+		case info.Mode()&os.ModeSymlink != 0:
+			name += "@"
+		case info.Mode()&0o111 != 0:
+			name += "*"
+		}
 	}
 	return name
+}
+
+// addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
+func addTreePrefixes(entries []Entry, prefix string, cfg Config) ([]Entry, error) {
+	var result []Entry
+	lastIndex := len(entries) - 1
+	for i, e := range entries {
+		connector := "├── "
+		subPrefix := "│   "
+		if i == lastIndex {
+			connector = "└── "
+			subPrefix = "    "
+		}
+		e.name = prefix + connector + e.name
+		result = append(result, e)
+		if e.info.IsDir() {
+			subEntries, err := ReadEntries(filepath.Join(e.path, e.info.Name()), cfg)
+			if err != nil {
+				return nil, err
+			}
+			subEntries, err = addTreePrefixes(subEntries, prefix+subPrefix, cfg)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, subEntries...)
+		}
+	}
+	return result, nil
+}
+
+// renderTree renders the entries in a tree-like format.
+func renderTree(entries []Entry) string {
+	var sb strings.Builder
+	for _, e := range entries {
+		fmt.Fprintf(&sb, "%s\n", e.name)
+	}
+	return sb.String()
 }
