@@ -12,6 +12,9 @@ import (
 // renderGrid formats entries into a grid.
 // It adapts to terminal width for a compact display.
 func renderGrid(entries []Entry) (string, error) {
+	if len(entries) == 0 {
+		return "", nil
+	}
 	names := make([]string, 0, len(entries))
 	var maxNameLen int
 	for _, e := range entries {
@@ -62,16 +65,16 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 }
 
 // getTableDimensions computes the number of columns and rows for the grid.
-func getTableDimensions(termWidth, maxNameLen, entryCount int) (columns, rows int) {
+func getTableDimensions(termWidth, maxNameLen, entryCount int) (int, int) {
 	// Divide terminal width by column width (name length + padding)
-	columns = termWidth / (maxNameLen + 2)
+	columns := termWidth / (maxNameLen + 2)
 	if columns < 1 {
 		columns = 1
 	}
 	if columns > entryCount {
 		columns = entryCount
 	}
-	rows = (entryCount + columns - 1) / columns
+	rows := (entryCount + columns - 1) / columns
 	return columns, rows
 }
 
