@@ -65,6 +65,5 @@ Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
 
 ## Todo
 
-- Tree: Add `-T --tree` flag to Tree-like recursive view
 - Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
 - Colorization: Enable colored output

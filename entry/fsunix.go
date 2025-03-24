@@ -9,8 +9,10 @@ import (
 	"syscall"
 )
 
-var uidCache = make(map[string]string)
-var gidCache = make(map[string]string)
+var (
+	uidCache = make(map[string]string)
+	gidCache = make(map[string]string)
+)
 
 // userGroup retrieves the file owner and group names for the Entry.
 // Falls back to UID/GID if names cannot be resolved.

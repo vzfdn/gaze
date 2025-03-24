@@ -29,7 +29,7 @@ type widths struct {
 // renderLong renders a detailed view of file entries, aligned in columns.
 func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
-		return "total 0\n"
+		return ""
 	}
 	rows, w := processEntries(entries, cfg)
 	var sb strings.Builder
@@ -41,7 +41,6 @@ func renderLong(entries []Entry, cfg Config) string {
 		files = "File"
 	}
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
-	// Header
 	if cfg.Header {
 		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %*s %s\n",
 			w.perms, "Permissions",
@@ -52,7 +51,6 @@ func renderLong(entries []Entry, cfg Config) string {
 			"Name",
 		)
 	}
-	// Rows
 	for _, r := range rows {
 		writeRow(&sb, r, w)
 	}

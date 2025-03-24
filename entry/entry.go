@@ -55,19 +55,19 @@ func PrintEntries(path string, cfg Config) error {
 		cfg.Recurse = false
 		entries, err = addTreePrefixes(entries, "", cfg)
 		if err != nil {
-			return err
+			return fmt.Errorf("tree error: %w", err)
 		}
 	}
 	output, err := render(entries, cfg)
 	if err != nil {
-		return fmt.Errorf("%s: format error: %w", path, err)
+		return fmt.Errorf("render error: %w", err)
 	}
-	fmt.Println(output)
+	fmt.Fprint(os.Stdout, output)
 	if cfg.Recurse {
 		for _, e := range entries {
 			if e.info.IsDir() {
 				subDir := filepath.Join(path, e.info.Name())
-				fmt.Printf("%s:\n", subDir)
+				fmt.Printf("\n%s:\n", subDir)
 				if err := PrintEntries(subDir, cfg); err != nil {
 					return err
 				}
@@ -117,7 +117,6 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		}
 		entries = append(entries, e)
 	}
-	// Sort entries 
 	switch {
 	case cfg.Size:
 		sortBySize(entries)
@@ -137,13 +136,13 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 // render generates output based on entries and configuration.
 // It uses long format if -l is set, otherwise defaults to grid.
 func render(entries []Entry, cfg Config) (string, error) {
-    if cfg.Long {
-        return renderLong(entries, cfg), nil
-    }
-    if cfg.Tree {
-        return renderTree(entries), nil
-    }
-    return renderGrid(entries)
+	if cfg.Long {
+		return renderLong(entries, cfg), nil
+	}
+	if cfg.Tree {
+		return renderTree(entries), nil
+	}
+	return renderGrid(entries)
 }
 
 // formatName formats the file name based on the file type and configuration.

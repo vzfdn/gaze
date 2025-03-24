@@ -25,14 +25,12 @@ func userGroup(e Entry) (string, string) {
 		fmt.Fprintf(os.Stderr, "warning: cannot get security info for %s: %v\n", path, err)
 		return "unknown", "unknown"
 	}
-	
 	owner := "unknown"
 	if ownerSid, _, err := sd.Owner(); err == nil && ownerSid != nil {
 		owner = sidToName(ownerSid, sidCache)
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: cannot get owner for %s: %v\n", path, err)
 	}
-
 	group := "unknown"
 	if groupSid, _, err := sd.Group(); err == nil && groupSid != nil {
 		group = sidToName(groupSid, sidCache)
