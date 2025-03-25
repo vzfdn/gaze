@@ -53,7 +53,7 @@ func PrintEntries(path string, cfg Config) error {
 	}
 	if cfg.Tree {
 		cfg.Recurse = false
-		entries, err = addTreePrefixes(entries, "", cfg)
+		entries, err = addTreePrefixes(path, entries, cfg, "", 0)
 		if err != nil {
 			return fmt.Errorf("tree error: %w", err)
 		}
@@ -170,8 +170,20 @@ func formatName(info fs.FileInfo, cfg Config) string {
 }
 
 // addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
-func addTreePrefixes(entries []Entry, prefix string, cfg Config) ([]Entry, error) {
+func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, depth int) ([]Entry, error) {
 	var result []Entry
+	if depth == 0 {
+		fi, err := os.Stat(path)
+		if err != nil {
+			return nil, err
+		}
+		parent := Entry{
+			info: fi,
+			name: formatName(fi, cfg),
+			path: path,
+		}
+		result = append(result, parent)
+	}
 	lastIndex := len(entries) - 1
 	for i, e := range entries {
 		connector := "├── "
@@ -187,7 +199,13 @@ func addTreePrefixes(entries []Entry, prefix string, cfg Config) ([]Entry, error
 			if err != nil {
 				return nil, err
 			}
-			subEntries, err = addTreePrefixes(subEntries, prefix+subPrefix, cfg)
+			subEntries, err = addTreePrefixes(
+				filepath.Join(e.path, e.info.Name()),
+				subEntries,
+				cfg,
+				prefix+subPrefix,
+				depth+1,
+			)
 			if err != nil {
 				return nil, err
 			}
