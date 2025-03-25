@@ -82,14 +82,21 @@ func expandShortFlags(args []string) []string {
 	return result
 }
 
-// ResolvePath returns the first non-flag argument or the current directory.
+// ResolvePath returns the first non-flag argument as a cleaned path,
+// or "." if none is provided. It returns an error if the path is inaccessible.
 func ResolvePath(f *flag.FlagSet) (string, error) {
-	if f.NArg() > 0 {
-		return f.Arg(0), nil
+	if f.NArg() == 0 {
+        return ".", nil
+    }
+    path := filepath.Clean(f.Arg(0))
+    if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("%q: no such file or directory", path)
+		}
+		if os.IsPermission(err) {
+			return "", fmt.Errorf("%q: permission denied", path)
+		}
+		return "", fmt.Errorf("%q: %v", path, err)  
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("cannot get current directory: %w", err)
-	}
-	return wd, nil
+    return path, nil
 }

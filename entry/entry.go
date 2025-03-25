@@ -67,6 +67,9 @@ func PrintEntries(path string, cfg Config) error {
 		for _, e := range entries {
 			if e.info.IsDir() {
 				subDir := filepath.Join(path, e.info.Name())
+				if path == "." {
+					subDir = "./" + e.info.Name()
+				}
 				fmt.Printf("\n%s:\n", subDir)
 				if err := PrintEntries(subDir, cfg); err != nil {
 					return err
@@ -82,13 +85,13 @@ func PrintEntries(path string, cfg Config) error {
 func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	dirEntry, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("cannot access %s: %w", path, err)
+		return nil, err
 	}
 	entries := make([]Entry, 0, len(dirEntry))
 	for _, de := range dirEntry {
 		info, err := de.Info()
 		if err != nil {
-			return nil, fmt.Errorf("cannot access %s: %w", filepath.Join(path, de.Name()), err)
+			return nil, err
 		}
 		// Skip hidden files unless cfg.All is true.
 		if !cfg.All && strings.HasPrefix(info.Name(), ".") {

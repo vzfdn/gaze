@@ -20,6 +20,7 @@ func main() {
 	}
 	err = entry.PrintEntries(path, cfg)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)
