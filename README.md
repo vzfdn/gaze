@@ -34,17 +34,20 @@ Then run it with:
 ## Example
 
 <pre>
-> gaze -lash media/
-8 Files, 16.1M
+> gaze -lashT media/
+11 Files, 16.1M
 Permissions User Group Modified       Size Name
--rwxrwxrwx  rwin rwin  Nov 21  2023  12.5M 'Evanescence - Tourniquet.mp3'
--rwxrwxrwx  rwin rwin  Sep 10  2023   2.6M aesthetic.mp4
--rwxrwxrwx  rwin rwin  Dec 15  2022 912.2K cpumemory.pdf
--rwxrwxrwx  rwin rwin  Aug 08  2024 144.8K 'Baldur`s_Gate_3.webp'
-drwxrwxrwx  rwin rwin  Feb 24 18:07   4.0K notes
--rwxrwxrwx  rwin rwin  Feb 24 18:21   1.1K test.txt
--rwxrwxrwx  rwin rwin  Oct 30  2024     40 .file
-Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 'link to pdf' -> cpumemory.pdf
+drwxrwxrwx  rwin rwin  Mar 28 12:04   4.0K media
+-rwxrwxrwx  rwin rwin  Nov 21  2023  12.5M ├── 'Evanescence - Tourniquet.mp3'
+-rwxrwxrwx  rwin rwin  Sep 10  2023   2.6M ├── aesthetic.mp4
+-rwxrwxrwx  rwin rwin  Dec 15  2022 912.2K ├── cpumemory.pdf
+-rwxrwxrwx  rwin rwin  Aug 08  2024 144.8K ├── 'Baldur`s_Gate_3.webp'
+drwxrwxrwx  rwin rwin  Feb 24 18:07   4.0K ├── notes
+-rwxrwxrwx  rwin rwin  Jul 17  2024    981 │   └── chores
+-rwxrwxrwx  rwin rwin  Feb 24 18:21   1.1K ├── test.txt
+-rwxrwxrwx  rwin rwin  Oct 30  2024     40 ├── .file
+Lrwxrwxrwx  rwin rwin  Mar 04 15:52     13 ├── 'link to pdf' -> cpumemory.pdf
+Lrwxrwxrwx  rwin rwin  Mar 10 22:50      6 └── l -> /tmp/l
 </pre>
 
 ## Flags
