@@ -6,6 +6,23 @@ import (
 	"slices"
 )
 
+// sortEntries sorts entries according to the given configuration.
+func sortEntries(entries []Entry, cfg Config) {
+	switch {
+	case cfg.Size:
+		sortBySize(entries)
+	case cfg.Time:
+		sortByTime(entries)
+	case cfg.Kind:
+		sortByKind(entries)
+	case cfg.Ext:
+		sortByExt(entries)
+	}
+	if cfg.Reverse {
+		reverse(entries)
+	}
+}
+
 // sortBySize sorts entries in descending order by file size.
 func sortBySize(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {

@@ -44,6 +44,16 @@ func (e Entry) size() int64 {
 	return e.info.Size()
 }
 
+// NewEntry creates a file/directory entry with metadata.
+func NewEntry(fi fs.FileInfo, name, path, target string) Entry {
+	return Entry{
+		info:   fi,
+		name:   name,
+		path:   path,
+		target: target,
+	}
+}
+
 // PrintEntries prints entries to stdout.
 // It optionally recurses into subdirectories based on Config.Recurse.
 func PrintEntries(path string, cfg Config) error {
@@ -120,19 +130,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		}
 		entries = append(entries, e)
 	}
-	switch {
-	case cfg.Size:
-		sortBySize(entries)
-	case cfg.Time:
-		sortByTime(entries)
-	case cfg.Kind:
-		sortByKind(entries)
-	case cfg.Ext:
-		sortByExt(entries)
-	}
-	if cfg.Reverse {
-		reverse(entries)
-	}
+	sortEntries(entries, cfg)
 	return entries, nil
 }
 
@@ -177,7 +175,7 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, Entry{info: fi, name: formatName(fi, cfg), path: path})
+		result = append(result, NewEntry(fi, formatName(fi, cfg), path, ""))
 	}
 	for i, e := range entries {
 		isLast := i == len(entries)-1
