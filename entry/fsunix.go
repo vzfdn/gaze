@@ -4,7 +4,6 @@ package entry
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 	"syscall"
 )
@@ -19,7 +18,6 @@ var (
 func userGroup(e Entry) (string, string) {
 	stat, ok := e.info.Sys().(*syscall.Stat_t)
 	if !ok {
-		fmt.Fprintf(os.Stderr, "warning: cannot get syscall.Stat_t for %s\n", e.info.Name())
 		return "unknown", "unknown"
 	}
 	uid := fmt.Sprint(stat.Uid)
@@ -29,7 +27,6 @@ func userGroup(e Entry) (string, string) {
 			usr = u.Username
 			uidCache[uid] = usr
 		} else {
-			fmt.Fprintf(os.Stderr, "warning: cannot resolve UID %s: %v\n", uid, err)
 			usr = uid
 		}
 	}
@@ -40,7 +37,6 @@ func userGroup(e Entry) (string, string) {
 			group = g.Name
 			gidCache[gid] = group
 		} else {
-			fmt.Fprintf(os.Stderr, "warning: cannot resolve GID %s: %v\n", gid, err)
 			group = gid
 		}
 	}

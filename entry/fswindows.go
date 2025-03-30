@@ -3,8 +3,6 @@
 package entry
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 
 	"golang.org/x/sys/windows"
@@ -13,7 +11,7 @@ import (
 // userGroup retrieves the file owner and group names for the Entry.
 // Falls back to SID strings if names cannot be resolved.
 func userGroup(e Entry) (string, string) {
-	sidCache := make(map[string]string) // Local cache per call
+	sidCache := make(map[string]string) // Local cache; SIDs rarely repeat in a directory
 	path := filepath.Join(e.path, e.info.Name())
 	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
 	sd, err := windows.GetNamedSecurityInfo(
@@ -22,22 +20,16 @@ func userGroup(e Entry) (string, string) {
 		windows.SECURITY_INFORMATION(securityFlags),
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: cannot get security info for %s: %v\n", path, err)
 		return "unknown", "unknown"
 	}
 	owner := "unknown"
 	if ownerSid, _, err := sd.Owner(); err == nil && ownerSid != nil {
 		owner = sidToName(ownerSid, sidCache)
-	} else if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: cannot get owner for %s: %v\n", path, err)
 	}
 	group := "unknown"
 	if groupSid, _, err := sd.Group(); err == nil && groupSid != nil {
 		group = sidToName(groupSid, sidCache)
-	} else if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: cannot get group for %s: %v\n", path, err)
 	}
-
 	return owner, group
 }
 
