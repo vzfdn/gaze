@@ -177,39 +177,31 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 		if err != nil {
 			return nil, err
 		}
-		parent := Entry{
-			info: fi,
-			name: formatName(fi, cfg),
-			path: path,
-		}
-		result = append(result, parent)
+		result = append(result, Entry{info: fi, name: formatName(fi, cfg), path: path})
 	}
-	lastIndex := len(entries) - 1
 	for i, e := range entries {
+		isLast := i == len(entries)-1
 		connector := "├── "
-		subPrefix := "│   "
-		if i == lastIndex {
+		if isLast {
 			connector = "└── "
-			subPrefix = "    "
 		}
 		e.name = prefix + connector + e.name
 		result = append(result, e)
 		if e.info.IsDir() {
-			subEntries, err := ReadEntries(filepath.Join(e.path, e.info.Name()), cfg)
+			subPath := filepath.Join(e.path, e.info.Name())
+			subEntries, err := ReadEntries(subPath, cfg)
 			if err != nil {
 				return nil, err
 			}
-			subEntries, err = addTreePrefixes(
-				filepath.Join(e.path, e.info.Name()),
-				subEntries,
-				cfg,
-				prefix+subPrefix,
-				depth+1,
-			)
+			subPrefix := prefix + "│   "
+			if isLast {
+				subPrefix = prefix + "    "
+			}
+			subTree, err := addTreePrefixes(subPath, subEntries, cfg, subPrefix, depth+1)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, subEntries...)
+			result = append(result, subTree...)
 		}
 	}
 	return result, nil
