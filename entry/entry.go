@@ -90,48 +90,71 @@ func PrintEntries(path string, cfg Config) error {
 	return nil
 }
 
-// ReadEntries reads directory entries from path, applying Config rules.
-// Returns a slice of entries or an error if reading fails.
-func ReadEntries(path string, cfg Config) ([]Entry, error) {
-	dirEntry, err := os.ReadDir(path)
+// ReadEntries lists entries in path, applying filters from Config.
+// If path is a file, it returns a single-entry slice or nil if skipped.
+func ReadEntries(path string, config Config) ([]Entry, error) {
+	fileInfo, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
-	entries := make([]Entry, 0, len(dirEntry))
-	for _, de := range dirEntry {
-		info, err := de.Info()
+	if !fileInfo.IsDir() {
+		entry, included, err := processEntry(path, fileInfo, config)
 		if err != nil {
 			return nil, err
 		}
-		// Skip hidden files unless cfg.All is true.
-		if !cfg.All && strings.HasPrefix(info.Name(), ".") {
-			continue
+		if included {
+			return []Entry{entry}, nil
 		}
-		e := Entry{
-			info: info,
-			name: formatName(info, cfg),
-			path: path,
-		}
-		// Process symbolic links.
-		if info.Mode()&os.ModeSymlink != 0 {
-			linkPath := filepath.Join(path, info.Name())
-			target, err := os.Readlink(linkPath)
-			if err != nil {
-				continue
-			}
-			e.target = target
-			if cfg.Dereference {
-				// Override with dereferenced info if available.
-				if targetInfo, err := os.Stat(linkPath); err == nil {
-					e.info = targetInfo
-					e.target = "" // Clear target when successfully dereferenced.
-				}
-			}
-		}
-		entries = append(entries, e)
+		return nil, nil
 	}
-	sortEntries(entries, cfg)
+	dirEntries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]Entry, 0, len(dirEntries))
+	for _, de := range dirEntries {
+		fileInfo, err := de.Info()
+		if err != nil {
+			continue // Skip unreadable entries (e.g., permission denied).
+		}
+		entry, included, err := processEntry(filepath.Join(path, fileInfo.Name()), fileInfo, config)
+		if err != nil {
+			continue // Skip problematic entries (e.g., broken symlinks).
+		}
+		if included {
+			entries = append(entries, entry)
+		}
+	}
+	if len(entries) > 1 {
+		sortEntries(entries, config)
+	}
 	return entries, nil
+}
+
+// processEntry creates an Entry while applying filters for hidden files and handling symlinks.
+// Returns the Entry and true if it should be included, false if skipped.
+func processEntry(fullPath string, fileInfo fs.FileInfo, config Config) (Entry, bool, error) {
+	// Skip hidden files unless config.All is true.
+	if !config.All && strings.HasPrefix(fileInfo.Name(), ".") {
+		return Entry{}, false, nil
+	}
+	e := NewEntry(fileInfo, formatName(fileInfo, config), filepath.Dir(fullPath), "")
+	// Handle symlinks
+	if fileInfo.Mode()&os.ModeSymlink != 0 {
+		linkTarget, err := os.Readlink(fullPath)
+		if err != nil {
+			return Entry{}, false, nil
+		}
+		e.target = linkTarget
+		if config.Dereference {
+			// Replace entry info with dereferenced target info if available
+			if targetInfo, err := os.Stat(fullPath); err == nil {
+				e.info = targetInfo
+				e.target = "" // Target is now represented by entry.info
+			}
+		}
+	}
+	return e, true, nil
 }
 
 // render generates output based on entries and configuration.
@@ -168,6 +191,7 @@ func formatName(info fs.FileInfo, cfg Config) string {
 }
 
 // addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
+// If a single entry is not a directory, it is returned without a tree structure.
 func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, depth int) ([]Entry, error) {
 	var result []Entry
 	if depth == 0 {
@@ -175,6 +199,11 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 		if err != nil {
 			return nil, err
 		}
+		// If `path` is a file, return it directly (no tree formatting)
+		if !fi.IsDir() {
+			return entries, nil
+		}
+		// If `path` is a directory, include it as the root
 		result = append(result, NewEntry(fi, formatName(fi, cfg), path, ""))
 	}
 	for i, e := range entries {
