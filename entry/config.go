@@ -65,6 +65,25 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	return cfg, fs, nil
 }
 
+// ResolvePath returns the first non-flag argument as a cleaned path,
+// or "." if none is provided. It returns an error if the path is inaccessible.
+func ResolvePath(f *flag.FlagSet) (string, error) {
+	if f.NArg() == 0 {
+		return ".", nil
+	}
+	path := filepath.Clean(f.Arg(0))
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("%q: no such file or directory", path)
+		}
+		if os.IsPermission(err) {
+			return "", fmt.Errorf("%q: permission denied", path)
+		}
+		return "", fmt.Errorf("%q: %v", path, err)
+	}
+	return path, nil
+}
+
 // expandShortFlags splits combined short flags (e.g., "-al" to "-a -l").
 func expandShortFlags(args []string) []string {
 	result := make([]string, 0, len(args)*2)
@@ -80,23 +99,4 @@ func expandShortFlags(args []string) []string {
 		}
 	}
 	return result
-}
-
-// ResolvePath returns the first non-flag argument as a cleaned path,
-// or "." if none is provided. It returns an error if the path is inaccessible.
-func ResolvePath(f *flag.FlagSet) (string, error) {
-	if f.NArg() == 0 {
-        return ".", nil
-    }
-    path := filepath.Clean(f.Arg(0))
-    if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("%q: no such file or directory", path)
-		}
-		if os.IsPermission(err) {
-			return "", fmt.Errorf("%q: permission denied", path)
-		}
-		return "", fmt.Errorf("%q: %v", path, err)  
-	}
-    return path, nil
 }

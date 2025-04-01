@@ -30,6 +30,34 @@ func renderGrid(entries []Entry) (string, error) {
 	return generateTable(names, maxNameLen, columns, rows), nil
 }
 
+// getTableDimensions computes the number of columns and rows for the grid.
+func getTableDimensions(termWidth, maxNameLen, entryCount int) (int, int) {
+	// Divide terminal width by column width (name length + padding)
+	columns := termWidth / (maxNameLen + 2)
+	if columns < 1 {
+		columns = 1
+	}
+	if columns > entryCount {
+		columns = entryCount
+	}
+	rows := (entryCount + columns - 1) / columns
+	return columns, rows
+}
+
+// terminalWidth retrieves the terminal width.
+// It falls back to 80 if unavailable.
+func terminalWidth() (int, error) {
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: cannot get terminal size: %v\n", err)
+		return 80, nil
+	}
+	if width <= 0 {
+		return 80, nil
+	}
+	return width, nil
+}
+
 // generateTable builds a grid string from names using a row-major layout.
 func generateTable(names []string, maxNameLen, columns, rows int) string {
 	var sb strings.Builder
@@ -62,32 +90,4 @@ func generateTable(names []string, maxNameLen, columns, rows int) string {
 		sb.WriteByte('\n')
 	}
 	return sb.String()
-}
-
-// getTableDimensions computes the number of columns and rows for the grid.
-func getTableDimensions(termWidth, maxNameLen, entryCount int) (int, int) {
-	// Divide terminal width by column width (name length + padding)
-	columns := termWidth / (maxNameLen + 2)
-	if columns < 1 {
-		columns = 1
-	}
-	if columns > entryCount {
-		columns = entryCount
-	}
-	rows := (entryCount + columns - 1) / columns
-	return columns, rows
-}
-
-// terminalWidth retrieves the terminal width.
-// It falls back to 80 if unavailable.
-func terminalWidth() (int, error) {
-	width, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: cannot get terminal size: %v\n", err)
-		return 80, nil
-	}
-	if width <= 0 {
-		return 80, nil
-	}
-	return width, nil
 }

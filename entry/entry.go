@@ -19,14 +19,24 @@ type Entry struct {
 	target string
 }
 
+// NewEntry creates a file/directory entry with metadata.
+func NewEntry(fi fs.FileInfo, name, path, target string) Entry {
+	return Entry{
+		info:   fi,
+		name:   name,
+		path:   path,
+		target: target,
+	}
+}
+
+// size returns the size of the Entry in bytes.
+func (e Entry) size() int64 {
+	return e.info.Size()
+}
+
 // permission returns the file permissions of the Entry as a string.
 func (e Entry) permission() string {
 	return e.info.Mode().String()
-}
-
-// userAndGroup returns the user and group names for the Entry's file info.
-func (e Entry) userAndGroup() (string, string) {
-	return userGroup(e)
 }
 
 // time returns the formatted modification time of the Entry.
@@ -39,19 +49,9 @@ func (e Entry) time() string {
 	return mt.Format("Jan 02  2006")
 }
 
-// size returns the size of the Entry in bytes.
-func (e Entry) size() int64 {
-	return e.info.Size()
-}
-
-// NewEntry creates a file/directory entry with metadata.
-func NewEntry(fi fs.FileInfo, name, path, target string) Entry {
-	return Entry{
-		info:   fi,
-		name:   name,
-		path:   path,
-		target: target,
-	}
+// userAndGroup returns the user and group names for the Entry's file info.
+func (e Entry) userAndGroup() (string, string) {
+	return userGroup(e)
 }
 
 // PrintEntries prints entries to stdout.
@@ -135,7 +135,7 @@ func ReadEntries(path string, config Config) ([]Entry, error) {
 // Returns the Entry and true if it should be included, false if skipped.
 func processEntry(fullPath string, fileInfo fs.FileInfo, config Config) (Entry, bool, error) {
 	// Skip hidden files unless config.All is true.
-	if !config.All && strings.HasPrefix(fileInfo.Name(), ".") {
+	if !config.All && isHidden(fileInfo) {
 		return Entry{}, false, nil
 	}
 	e := NewEntry(fileInfo, formatName(fileInfo, config), filepath.Dir(fullPath), "")
@@ -150,23 +150,16 @@ func processEntry(fullPath string, fileInfo fs.FileInfo, config Config) (Entry, 
 			// Replace entry info with dereferenced target info if available
 			if targetInfo, err := os.Stat(fullPath); err == nil {
 				e.info = targetInfo
-				e.target = "" // Target is now represented by entry.info
+				e.target = ""
 			}
 		}
 	}
 	return e, true, nil
 }
 
-// render generates output based on entries and configuration.
-// It uses long format if -l is set, otherwise defaults to grid.
-func render(entries []Entry, cfg Config) (string, error) {
-	if cfg.Long {
-		return renderLong(entries, cfg), nil
-	}
-	if cfg.Tree {
-		return renderTree(entries), nil
-	}
-	return renderGrid(entries)
+// isHidden reports whether a file is hidden by its name starting with a dot.
+func isHidden(fileInfo fs.FileInfo) bool {
+	return fileInfo.Name()[0] == '.'
 }
 
 // formatName formats the file name based on the file type and configuration.
@@ -232,6 +225,18 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 		}
 	}
 	return result, nil
+}
+
+// render generates output based on entries and configuration.
+// It uses long format if -l is set, otherwise defaults to grid.
+func render(entries []Entry, cfg Config) (string, error) {
+	if cfg.Long {
+		return renderLong(entries, cfg), nil
+	}
+	if cfg.Tree {
+		return renderTree(entries), nil
+	}
+	return renderGrid(entries)
 }
 
 // renderTree renders the entries in a tree-like format.
