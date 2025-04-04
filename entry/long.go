@@ -19,11 +19,7 @@ type row struct {
 
 // widths holds the maximum column widths for long format rendering.
 type widths struct {
-	perms int
-	user  int
-	group int
-	mod   int
-	size  int
+	perms, user, group, mod, size int
 }
 
 // renderLong renders a detailed view of file entries, aligned in columns.
@@ -33,9 +29,7 @@ func renderLong(entries []Entry, cfg Config) string {
 	}
 	rows, w := processEntries(entries, cfg)
 	var sb strings.Builder
-	// Preallocate approximate capacity
-	sb.Grow(20 + len(entries)*(w.perms+w.user+w.group+w.mod+w.size+20))
-	// Summary with file count
+	sb.Grow(len(entries) * (w.perms + w.user + w.group + w.mod + w.size + 20))
 	files := "Files"
 	if len(entries) == 1 {
 		files = "File"
@@ -52,14 +46,14 @@ func renderLong(entries []Entry, cfg Config) string {
 		)
 	}
 	for _, r := range rows {
-		writeRow(&sb, r, w)
+		formatRow(&sb, r, w)
 	}
 	return sb.String()
 }
 
-// processEntries processes file entries and calculates maximum column widths.
+// processEntries builds rows and calculates column widths from entries.
 func processEntries(entries []Entry, cfg Config) ([]row, widths) {
-	rows := make([]row, 0, len(entries))
+	rows := make([]row, len(entries))
 	w := widths{
 		perms: utf8.RuneCountInString("Permissions"),
 		user:  utf8.RuneCountInString("User"),
@@ -67,58 +61,41 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 		mod:   utf8.RuneCountInString("Modified"),
 		size:  utf8.RuneCountInString("Size"),
 	}
-	for _, e := range entries {
+	for i, e := range entries {
 		u, g := e.userAndGroup()
-		r := row{
-			perms:   e.permission(),
-			user:    u,
-			group:   g,
-			modTime: e.time(),
-			size:    humanReadableSize(e.size()),
-			name:    e.name,
-		}
+		target := ""
+		size := humanReadableSize(e.size())
 		if e.target != "" {
 			if cfg.Dereference {
-				r.perms = "----------"
-				r.user = "-"
-				r.group = "-"
-				r.modTime = "-"
-				r.size = "-"
-				r.target = " [nonexist]"
-			} else {
-				r.target = " -> " + e.target
-				r.size = humanReadableSize(int64(len(e.target)))
+				rows[i] = row{"----------", "-", "-", "-", "-", e.name, " [nonexist]"}
+				continue
 			}
+			target = " -> " + e.target
+			size = humanReadableSize(int64(len(e.target)))
 		}
-		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
-		w.user = max(w.user, utf8.RuneCountInString(r.user))
-		w.group = max(w.group, utf8.RuneCountInString(r.group))
-		w.mod = max(w.mod, utf8.RuneCountInString(r.modTime))
-		w.size = max(w.size, utf8.RuneCountInString(r.size))
-		rows = append(rows, r)
+		rows[i] = row{e.permission(), u, g, e.time(), size, e.name, target}
+		w.perms = max(w.perms, utf8.RuneCountInString(rows[i].perms))
+		w.user = max(w.user, utf8.RuneCountInString(rows[i].user))
+		w.group = max(w.group, utf8.RuneCountInString(rows[i].group))
+		w.mod = max(w.mod, utf8.RuneCountInString(rows[i].modTime))
+		w.size = max(w.size, utf8.RuneCountInString(rows[i].size))
 	}
 	return rows, w
 }
 
-// writeRow writes a single file entry row to the strings.Builder with aligned columns.
-func writeRow(sb *strings.Builder, r row, w widths) {
-	// Append the symlink target to the name if it exists
-	name := r.name
-	if r.target != "" {
-		name += r.target
-	}
-	fmt.Fprintf(sb, "%-*s %-*s %-*s %-*s %*s %s\n",
+// formatRow appends a formatted row with aligned columns to the builder.
+func formatRow(sb *strings.Builder, r row, w widths) {
+	fmt.Fprintf(sb, "%-*s %-*s %-*s %-*s %*s %s%s\n",
 		w.perms, r.perms,
 		w.user, r.user,
 		w.group, r.group,
 		w.mod, r.modTime,
 		w.size, r.size,
-		name,
+		r.name, r.target,
 	)
 }
 
-// humanReadableSize converts bytes to a human-readable size.
-// For example, it returns "1.2M" to match tools like ls -h.
+// humanReadableSize converts bytes to a human-readable string (e.g., "1.2M").
 func humanReadableSize(size int64) string {
 	const (
 		_ = 1 << (iota * 10) // Ignore first value
@@ -150,7 +127,7 @@ func humanReadableSize(size int64) string {
 	}
 }
 
-// totalSize returns the total size of entries in a human-readable format.
+// totalSize returns the total size of entries in human-readable format.
 func totalSize(entries []Entry) string {
 	var t int64
 	for _, e := range entries {

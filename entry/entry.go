@@ -92,18 +92,18 @@ func PrintEntries(path string, cfg Config) error {
 
 // ReadEntries lists entries in path, applying filters from Config.
 // If path is a file, it returns a single-entry slice or nil if skipped.
-func ReadEntries(path string, config Config) ([]Entry, error) {
+func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	fileInfo, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 	if !fileInfo.IsDir() {
-		entry, included, err := processEntry(path, fileInfo, config)
+		e, included, err := processEntry(path, fileInfo, cfg)
 		if err != nil {
 			return nil, err
 		}
 		if included {
-			return []Entry{entry}, nil
+			return []Entry{e}, nil
 		}
 		return nil, nil
 	}
@@ -117,28 +117,28 @@ func ReadEntries(path string, config Config) ([]Entry, error) {
 		if err != nil {
 			continue // Skip unreadable entries (e.g., permission denied).
 		}
-		entry, included, err := processEntry(filepath.Join(path, fileInfo.Name()), fileInfo, config)
+		e, included, err := processEntry(filepath.Join(path, fileInfo.Name()), fileInfo, cfg)
 		if err != nil {
 			continue // Skip problematic entries (e.g., broken symlinks).
 		}
 		if included {
-			entries = append(entries, entry)
+			entries = append(entries, e)
 		}
 	}
 	if len(entries) > 1 {
-		sortEntries(entries, config)
+		sortEntries(entries, cfg)
 	}
 	return entries, nil
 }
 
 // processEntry creates an Entry while applying filters for hidden files and handling symlinks.
 // Returns the Entry and true if it should be included, false if skipped.
-func processEntry(fullPath string, fileInfo fs.FileInfo, config Config) (Entry, bool, error) {
+func processEntry(fullPath string, fileInfo fs.FileInfo, cfg Config) (Entry, bool, error) {
 	// Skip hidden files unless config.All is true.
-	if !config.All && isHidden(fileInfo) {
+	if !cfg.All && isHidden(fileInfo) {
 		return Entry{}, false, nil
 	}
-	e := NewEntry(fileInfo, formatName(fileInfo, config), filepath.Dir(fullPath), "")
+	e := NewEntry(fileInfo, formatName(fileInfo, cfg), filepath.Dir(fullPath), "")
 	// Handle symlinks
 	if fileInfo.Mode()&os.ModeSymlink != 0 {
 		linkTarget, err := os.Readlink(fullPath)
@@ -146,7 +146,7 @@ func processEntry(fullPath string, fileInfo fs.FileInfo, config Config) (Entry, 
 			return Entry{}, false, nil
 		}
 		e.target = linkTarget
-		if config.Dereference {
+		if cfg.Dereference {
 			// Replace entry info with dereferenced target info if available
 			if targetInfo, err := os.Stat(fullPath); err == nil {
 				e.info = targetInfo
