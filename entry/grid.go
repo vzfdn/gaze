@@ -9,43 +9,32 @@ import (
 	"golang.org/x/term"
 )
 
-// renderGrid formats entries into a grid.
-// It adapts to terminal width for a compact display.
+// renderGrid formats entries into a grid, adapting to terminal width.
 func renderGrid(entries []Entry) (string, error) {
 	if len(entries) == 0 {
 		return "", nil
 	}
-	names := make([]string, 0, len(entries))
-	var maxNameLen int
-	for _, e := range entries {
-		name := e.name
-		nameLen := utf8.RuneCountInString(name)
-		if nameLen > maxNameLen {
-			maxNameLen = nameLen
-		}
-		names = append(names, name)
-	}
+	names, maxLen := extractNames(entries)
 	termWidth, _ := terminalWidth()
-	columns, rows := getTableDimensions(termWidth, maxNameLen, len(names))
-	return generateTable(names, maxNameLen, columns, rows), nil
+	cols := min(max(termWidth/(maxLen+2), 1), len(names))
+	rows := (len(names) + cols - 1) / cols
+	return buildGrid(names, maxLen, cols, rows), nil
 }
 
-// getTableDimensions computes the number of columns and rows for the grid.
-func getTableDimensions(termWidth, maxNameLen, entryCount int) (int, int) {
-	// Divide terminal width by column width (name length + padding)
-	columns := termWidth / (maxNameLen + 2)
-	if columns < 1 {
-		columns = 1
+// extractNames pulls names from entries and finds the longest name length.
+func extractNames(entries []Entry) ([]string, int) {
+	names := make([]string, len(entries))
+	maxLen := 0
+	for i, e := range entries {
+		names[i] = e.name
+		if n := utf8.RuneCountInString(e.name); n > maxLen {
+			maxLen = n
+		}
 	}
-	if columns > entryCount {
-		columns = entryCount
-	}
-	rows := (entryCount + columns - 1) / columns
-	return columns, rows
+	return names, maxLen
 }
 
-// terminalWidth retrieves the terminal width.
-// It falls back to 80 if unavailable.
+// terminalWidth gets the terminal width, defaulting to 80 if unavailable.
 func terminalWidth() (int, error) {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
@@ -58,36 +47,19 @@ func terminalWidth() (int, error) {
 	return width, nil
 }
 
-// generateTable builds a grid string from names using a row-major layout.
-func generateTable(names []string, maxNameLen, columns, rows int) string {
+// buildGrid constructs the grid string from names.
+func buildGrid(names []string, maxLen, cols, rows int) string {
 	var sb strings.Builder
-	// Preallocate capacity for names, padding, and newlines
-	sb.Grow(len(names)*(maxNameLen+2) + rows)
-	if columns <= 1 {
-		for _, name := range names {
-			sb.WriteString(name)
+	sb.Grow(rows * cols * (maxLen + 2)) // Rough capacity estimate
+	for i, name := range names {
+		sb.WriteString(name)
+		// Pad only if not at end of row and not last item
+		if (i+1)%cols != 0 && i < len(names)-1 {
+			pad := maxLen - utf8.RuneCountInString(name) + 2
+			sb.WriteString(strings.Repeat(" ", pad))
+		} else {
 			sb.WriteByte('\n')
 		}
-		return sb.String()
-	}
-	for row := range rows {
-		for col := range columns {
-			// Map row,col to flat index in names
-			index := row*columns + col
-			if index >= len(names) {
-				break
-			}
-			name := names[index]
-			sb.WriteString(name)
-			if col < columns-1 {
-				// Pad to align next column
-				padWidth := maxNameLen - utf8.RuneCountInString(name) + 2
-				for range padWidth {
-					sb.WriteByte(' ')
-				}
-			}
-		}
-		sb.WriteByte('\n')
 	}
 	return sb.String()
 }
