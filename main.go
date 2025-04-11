@@ -10,7 +10,6 @@ import (
 func main() {
 	cfg, f, err := entry.ParseConfig()
 	if err != nil {
-		// f.Parse already printed error and usage to os.Stderr, just exit
 		os.Exit(1)
 	}
 	path, err := entry.ResolvePath(f)

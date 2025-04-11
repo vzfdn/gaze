@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // Entry represents a file or directory with its metadata.
@@ -27,31 +26,6 @@ func NewEntry(fi fs.FileInfo, name, path, target string) Entry {
 		path:   path,
 		target: target,
 	}
-}
-
-// size returns the size of the Entry in bytes.
-func (e Entry) size() int64 {
-	return e.info.Size()
-}
-
-// permission returns the file permissions of the Entry as a string.
-func (e Entry) permission() string {
-	return e.info.Mode().String()
-}
-
-// time returns the formatted modification time of the Entry.
-// Uses "Jan 02 15:04" for current-year entries, "Jan 02  2006" otherwise.
-func (e Entry) time() string {
-	mt := e.info.ModTime()
-	if mt.Year() == time.Now().Year() {
-		return mt.Format("Jan 02 15:04")
-	}
-	return mt.Format("Jan 02  2006")
-}
-
-// userAndGroup returns the user and group names for the Entry's file info.
-func (e Entry) userAndGroup() (string, string) {
-	return userGroup(e)
 }
 
 // PrintEntries prints entries to stdout.

@@ -26,7 +26,7 @@ func sortEntries(entries []Entry, cfg Config) {
 // sortBySize sorts entries in descending order by file size.
 func sortBySize(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
-		return cmp.Compare(b.size(), a.size())
+		return cmp.Compare(b.info.Size(), a.info.Size())
 	})
 }
 
