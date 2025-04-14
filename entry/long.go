@@ -54,40 +54,40 @@ func renderLong(entries []Entry, cfg Config) string {
 
 // processEntries builds rows and calculates column widths for long-format output.
 func processEntries(entries []Entry, cfg Config) ([]row, widths) {
-    rows := make([]row, len(entries))
-    w := widths{
-        perms: utf8.RuneCountInString("Permissions"),
-        user:  utf8.RuneCountInString("User"),
-        group: utf8.RuneCountInString("Group"),
-        mod:   utf8.RuneCountInString("Modified"),
-        size:  utf8.RuneCountInString("Size"),
-    }
-    for i, e := range entries {
-        u, g := userGroup(e)
-        rows[i] = row{
-            perms:   e.info.Mode().String(),
-            user:    u,
-            group:   g,
-            modTime: formatTime(e),
-            size:    humanReadableSize(e.info.Size()),
-            name:    e.name,
-        }
-        if e.target != "" {
-            if cfg.Dereference {
-                rows[i] = row{perms: "----------", user: "-", group: "-", modTime: "-", size: "-", name: e.name, target: " [nonexist]"}
-                continue
-            }
-            rows[i].target = " -> " + e.target
-            rows[i].size = humanReadableSize(int64(len(e.target)))
-        }
-        r := rows[i]
-        w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
-        w.user = max(w.user, utf8.RuneCountInString(r.user))
-        w.group = max(w.group, utf8.RuneCountInString(r.group))
-        w.mod = max(w.mod, utf8.RuneCountInString(r.modTime))
-        w.size = max(w.size, utf8.RuneCountInString(r.size))
-    }
-    return rows, w
+	rows := make([]row, len(entries))
+	w := widths{
+		perms: utf8.RuneCountInString("Permissions"),
+		user:  utf8.RuneCountInString("User"),
+		group: utf8.RuneCountInString("Group"),
+		mod:   utf8.RuneCountInString("Modified"),
+		size:  utf8.RuneCountInString("Size"),
+	}
+	for i, e := range entries {
+		u, g := userGroup(e)
+		rows[i] = row{
+			perms:   e.info.Mode().String(),
+			user:    u,
+			group:   g,
+			modTime: formatTime(e.info.ModTime()),
+			size:    humanReadableSize(e.info.Size()),
+			name:    e.name,
+		}
+		if e.target != "" {
+			if cfg.Dereference {
+				rows[i] = row{perms: "----------", user: "-", group: "-", modTime: "-", size: "-", name: e.name, target: " [nonexist]"}
+				continue
+			}
+			rows[i].target = " -> " + e.target
+			rows[i].size = humanReadableSize(int64(len(e.target)))
+		}
+		r := rows[i]
+		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
+		w.user = max(w.user, utf8.RuneCountInString(r.user))
+		w.group = max(w.group, utf8.RuneCountInString(r.group))
+		w.mod = max(w.mod, utf8.RuneCountInString(r.modTime))
+		w.size = max(w.size, utf8.RuneCountInString(r.size))
+	}
+	return rows, w
 }
 
 // formatRow appends a formatted row with aligned columns to the builder.
@@ -143,12 +143,10 @@ func totalSize(entries []Entry) string {
 	return humanReadableSize(t)
 }
 
-// formatTime returns the formatted modification time of the Entry.
-// Uses "Jan 02 15:04" for current-year entries, "Jan 02  2006" otherwise.
-func formatTime(e Entry) string {
-	mt := e.info.ModTime()
-	if mt.Year() == time.Now().Year() {
-		return mt.Format("Jan 02 15:04")
+// formatTime returns the formatted time.
+func formatTime(t time.Time) string {
+	if t.Year() == time.Now().Year() {
+		return t.Format("Jan 02 15:04")
 	}
-	return mt.Format("Jan 02  2006")
+	return t.Format("Jan 02  2006")
 }
