@@ -11,8 +11,9 @@ import (
 )
 
 // Entry represents a file or directory with its metadata.
+// It embeds fs.FileInfo to provide direct access to file information methods (Size, ModTime, IsDir, etc).
 type Entry struct {
-	info   fs.FileInfo
+	fs.FileInfo
 	name   string
 	path   string
 	target string
@@ -21,10 +22,10 @@ type Entry struct {
 // NewEntry creates a file/directory entry with metadata.
 func NewEntry(fi fs.FileInfo, name, path, target string) Entry {
 	return Entry{
-		info:   fi,
-		name:   name,
-		path:   path,
-		target: target,
+		FileInfo: fi,
+		name:     name,
+		path:     path,
+		target:   target,
 	}
 }
 
@@ -35,6 +36,7 @@ func PrintEntries(path string, cfg Config) error {
 	if err != nil {
 		return err
 	}
+
 	if cfg.Tree {
 		cfg.Recurse = false
 		entries, err = addTreePrefixes(path, entries, cfg, "", 0)
@@ -42,17 +44,19 @@ func PrintEntries(path string, cfg Config) error {
 			return fmt.Errorf("tree error: %w", err)
 		}
 	}
+
 	output, err := render(entries, cfg)
 	if err != nil {
 		return fmt.Errorf("render error: %w", err)
 	}
 	fmt.Fprint(os.Stdout, output)
+
 	if cfg.Recurse {
 		for _, e := range entries {
-			if e.info.IsDir() {
-				subDir := filepath.Join(path, e.info.Name())
+			if e.IsDir() {
+				subDir := filepath.Join(path, e.Name())
 				if path == "." {
-					subDir = "./" + e.info.Name()
+					subDir = "./" + e.Name()
 				}
 				fmt.Printf("\n%s:\n", subDir)
 				if err := PrintEntries(subDir, cfg); err != nil {
@@ -71,6 +75,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if !fileInfo.IsDir() {
 		e, included, err := processEntry(path, fileInfo, cfg)
 		if err != nil {
@@ -81,11 +86,14 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 		}
 		return nil, nil
 	}
+
 	dirEntries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
+
 	entries := make([]Entry, 0, len(dirEntries))
+
 	for _, de := range dirEntries {
 		fileInfo, err := de.Info()
 		if err != nil {
@@ -99,6 +107,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 			entries = append(entries, e)
 		}
 	}
+
 	if len(entries) > 1 {
 		sortEntries(entries, cfg)
 	}
@@ -112,18 +121,20 @@ func processEntry(fullPath string, fileInfo fs.FileInfo, cfg Config) (Entry, boo
 	if !cfg.All && isHidden(fileInfo) {
 		return Entry{}, false, nil
 	}
+
 	e := NewEntry(fileInfo, formatName(fileInfo, cfg), filepath.Dir(fullPath), "")
+
 	// Handle symlinks
 	if fileInfo.Mode()&os.ModeSymlink != 0 {
 		linkTarget, err := os.Readlink(fullPath)
 		if err != nil {
-			return Entry{}, false, nil
+			return Entry{}, false, fmt.Errorf("reading symlink %s: %w", fullPath, err)
 		}
 		e.target = linkTarget
 		if cfg.Dereference {
 			// Replace entry info with dereferenced target info if available
 			if targetInfo, err := os.Stat(fullPath); err == nil {
-				e.info = targetInfo
+				e.FileInfo = targetInfo
 				e.target = ""
 			}
 		}
@@ -132,8 +143,10 @@ func processEntry(fullPath string, fileInfo fs.FileInfo, cfg Config) (Entry, boo
 }
 
 // isHidden reports whether a file is hidden by its name starting with a dot.
+// Returns false for empty filenames to avoid potential panics.
 func isHidden(fileInfo fs.FileInfo) bool {
-	return fileInfo.Name()[0] == '.'
+	name := fileInfo.Name()
+	return len(name) > 0 && name[0] == '.'
 }
 
 // formatName formats the file name based on the file type and configuration.
@@ -160,11 +173,16 @@ func formatName(info fs.FileInfo, cfg Config) string {
 // addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
 // If a single entry is not a directory, it is returned without a tree structure.
 func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, depth int) ([]Entry, error) {
-	var result []Entry
+	estimatedCapacity := len(entries)
+	if depth == 0 {
+		estimatedCapacity++ // For root directory
+	}
+	result := make([]Entry, 0, estimatedCapacity)
+
 	if depth == 0 {
 		fi, err := os.Stat(path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("accessing path %s: %w", path, err)
 		}
 		// If `path` is a file, return it directly (no tree formatting)
 		if !fi.IsDir() {
@@ -173,6 +191,7 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 		// If `path` is a directory, include it as the root
 		result = append(result, NewEntry(fi, formatName(fi, cfg), path, ""))
 	}
+
 	for i, e := range entries {
 		isLast := i == len(entries)-1
 		connector := "├── "
@@ -181,11 +200,12 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 		}
 		e.name = prefix + connector + e.name
 		result = append(result, e)
-		if e.info.IsDir() {
-			subPath := filepath.Join(e.path, e.info.Name())
+
+		if e.IsDir() {
+			subPath := filepath.Join(e.path, e.Name())
 			subEntries, err := ReadEntries(subPath, cfg)
 			if err != nil {
-				return nil, err
+				continue // Skip unreadable directories
 			}
 			subPrefix := prefix + "│   "
 			if isLast {
@@ -193,7 +213,7 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 			}
 			subTree, err := addTreePrefixes(subPath, subEntries, cfg, subPrefix, depth+1)
 			if err != nil {
-				return nil, err
+				continue // Skip problematic subdirectories
 			}
 			result = append(result, subTree...)
 		}

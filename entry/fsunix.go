@@ -16,7 +16,7 @@ var (
 // userGroup retrieves the file owner and group names for the Entry.
 // Falls back to UID/GID if names cannot be resolved.
 func userGroup(e Entry) (string, string) {
-	stat, ok := e.info.Sys().(*syscall.Stat_t)
+	stat, ok := e.Sys().(*syscall.Stat_t)
 	if !ok {
 		return "unknown", "unknown"
 	}

@@ -11,8 +11,7 @@ import (
 // userGroup retrieves the file owner and group names for the Entry.
 // Falls back to SID strings if names cannot be resolved.
 func userGroup(e Entry) (string, string) {
-	sidCache := make(map[string]string) // Local cache; SIDs rarely repeat in a directory
-	path := filepath.Join(e.path, e.info.Name())
+	path := filepath.Join(e.path, e.Name())
 	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
 	sd, err := windows.GetNamedSecurityInfo(
 		path,
@@ -22,6 +21,7 @@ func userGroup(e Entry) (string, string) {
 	if err != nil {
 		return "unknown", "unknown"
 	}
+	sidCache := make(map[string]string) // Local cache; SIDs rarely repeat in a directory
 	owner := "unknown"
 	if ownerSid, _, err := sd.Owner(); err == nil && ownerSid != nil {
 		owner = sidToName(ownerSid, sidCache)

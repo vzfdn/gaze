@@ -28,14 +28,18 @@ func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
 		return ""
 	}
+
 	rows, w := processEntries(entries, cfg)
+
 	var sb strings.Builder
 	sb.Grow(len(entries) * (w.perms + w.user + w.group + w.mod + w.size + 20))
+
 	files := "Files"
 	if len(entries) == 1 {
 		files = "File"
 	}
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
+
 	if cfg.Header {
 		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %*s %s\n",
 			w.perms, "Permissions",
@@ -62,16 +66,18 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 		mod:   utf8.RuneCountInString("Modified"),
 		size:  utf8.RuneCountInString("Size"),
 	}
+
 	for i, e := range entries {
 		u, g := userGroup(e)
 		rows[i] = row{
-			perms:   e.info.Mode().String(),
+			perms:   e.Mode().String(),
 			user:    u,
 			group:   g,
-			modTime: formatTime(e.info.ModTime()),
-			size:    humanReadableSize(e.info.Size()),
+			modTime: formatTime(e.ModTime()),
+			size:    humanReadableSize(e.Size()),
 			name:    e.name,
 		}
+
 		if e.target != "" {
 			if cfg.Dereference {
 				rows[i] = row{perms: "----------", user: "-", group: "-", modTime: "-", size: "-", name: e.name, target: " [nonexist]"}
@@ -80,6 +86,7 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 			rows[i].target = " -> " + e.target
 			rows[i].size = humanReadableSize(int64(len(e.target)))
 		}
+		
 		r := rows[i]
 		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
 		w.user = max(w.user, utf8.RuneCountInString(r.user))
@@ -138,7 +145,7 @@ func humanReadableSize(size int64) string {
 func totalSize(entries []Entry) string {
 	var t int64
 	for _, e := range entries {
-		t += e.info.Size()
+		t += e.Size()
 	}
 	return humanReadableSize(t)
 }

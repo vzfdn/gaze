@@ -34,8 +34,7 @@ type boolFlag struct {
 
 // ParseConfig parses command-line flags and returns the configuration.
 func ParseConfig() (Config, *flag.FlagSet, error) {
-	cfg := Config{}
-	f := flag.NewFlagSet(filepath.Base(os.Args[0]), flag.ContinueOnError)
+	var cfg Config
 	boolFlags := []boolFlag{
 		{&cfg.All, "a", "all", "include hidden entries"},
 		{&cfg.Grid, "g", "grid", "display as grid (default)"},
@@ -51,6 +50,7 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 		{&cfg.Ext, "x", "extension", "sort by file extension"},
 		{&cfg.Reverse, "r", "reverse", "reverse the sorting order"},
 	}
+	f := flag.NewFlagSet(filepath.Base(os.Args[0]), flag.ContinueOnError)
 	for _, bf := range boolFlags {
 		f.BoolVar(bf.ptr, bf.shortName, false, bf.usage)
 		f.BoolVar(bf.ptr, bf.longName, false, "alias for -"+bf.shortName)
