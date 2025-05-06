@@ -4,23 +4,22 @@ package entry
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 // Entry represents a file or directory with its metadata.
-// It embeds fs.FileInfo to provide direct access to file information methods (Size, ModTime, IsDir, etc).
+// It embeds os.FileInfo to provide direct access to file information methods (Size, ModTime, IsDir, etc).
 type Entry struct {
-	fs.FileInfo
-	name   string
-	path   string
-	target string
+	os.FileInfo
+	name     string
+	path     string
+	target   string
 }
 
 // NewEntry creates a file/directory entry with metadata.
-func NewEntry(fi fs.FileInfo, name, path, target string) Entry {
+func NewEntry(fi os.FileInfo, name, path, target string) Entry {
 	return Entry{
 		FileInfo: fi,
 		name:     name,
@@ -116,7 +115,7 @@ func ReadEntries(path string, cfg Config) ([]Entry, error) {
 
 // processEntry creates an Entry while applying filters for hidden files and handling symlinks.
 // Returns the Entry and true if it should be included, false if skipped.
-func processEntry(fullPath string, fileInfo fs.FileInfo, cfg Config) (Entry, bool, error) {
+func processEntry(fullPath string, fileInfo os.FileInfo, cfg Config) (Entry, bool, error) {
 	// Skip hidden files unless config.All is true.
 	if !cfg.All && isHidden(fileInfo) {
 		return Entry{}, false, nil
@@ -144,100 +143,70 @@ func processEntry(fullPath string, fileInfo fs.FileInfo, cfg Config) (Entry, boo
 
 // isHidden reports whether a file is hidden by its name starting with a dot.
 // Returns false for empty filenames to avoid potential panics.
-func isHidden(fileInfo fs.FileInfo) bool {
+func isHidden(fileInfo os.FileInfo) bool {
 	name := fileInfo.Name()
 	return len(name) > 0 && name[0] == '.'
 }
 
-// formatName formats the file name based on the file type and configuration.
-// It quotes the name if it contains special characters or whitespace,
-// and appends a classification symbol ("/", "*", or "@") if cfg.Classify is enabled.
-func formatName(info fs.FileInfo, cfg Config) string {
+const (
+	typeDir  = "di"
+	typeLink = "ln"
+	typeExec = "ex"
+	typeFile = "fi"
+
+	symDir  = "/"
+	symLink = "@"
+	symExec = "*"
+
+	execBits     = 0o111 // Executable permission bits
+	specialChars = " \t\n\v\f\r!@#$%^&*()[]{}<>?/|\\~`"
+)
+
+// Classify returns a short type code for the given file (e.g. "di", "ln").
+func classify(info os.FileInfo) string {
+	mode := info.Mode()
+	switch {
+	case mode.IsDir():
+		return typeDir
+	case mode&os.ModeSymlink != 0:
+		return typeLink
+	case mode.Perm()&execBits != 0:
+		return typeExec
+	default:
+		return typeFile
+	}
+}
+
+// formatName returns the formatted file name, quoting special characters
+// and appending a classification symbol if enabled.
+func formatName(info os.FileInfo, cfg Config) string {
 	name := info.Name()
-	if strings.ContainsAny(name, " \t\n\v\f\r!@#$%^&*()[]{}<>?/|\\~`") {
+	if strings.ContainsAny(name, specialChars) {
 		name = fmt.Sprintf("'%s'", name)
 	}
 	if cfg.Classify {
-		switch {
-		case info.IsDir():
-			name += "/"
-		case info.Mode()&os.ModeSymlink != 0:
-			name += "@"
-		case info.Mode()&0o111 != 0:
-			name += "*"
+		switch classify(info) {
+		case typeDir:
+			name += symDir
+		case typeLink:
+			if cfg.Grid {
+				name += symLink
+			}
+		case typeExec:
+			name += symExec
 		}
 	}
 	return name
 }
 
-// addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
-// If a single entry is not a directory, it is returned without a tree structure.
-func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, depth int) ([]Entry, error) {
-	estimatedCapacity := len(entries)
-	if depth == 0 {
-		estimatedCapacity++ // For root directory
-	}
-	result := make([]Entry, 0, estimatedCapacity)
-
-	if depth == 0 {
-		fi, err := os.Stat(path)
-		if err != nil {
-			return nil, fmt.Errorf("accessing path %s: %w", path, err)
-		}
-		// If `path` is a file, return it directly (no tree formatting)
-		if !fi.IsDir() {
-			return entries, nil
-		}
-		// If `path` is a directory, include it as the root
-		result = append(result, NewEntry(fi, formatName(fi, cfg), path, ""))
-	}
-
-	for i, e := range entries {
-		isLast := i == len(entries)-1
-		connector := "├── "
-		if isLast {
-			connector = "└── "
-		}
-		e.name = prefix + connector + e.name
-		result = append(result, e)
-
-		if e.IsDir() {
-			subPath := filepath.Join(e.path, e.Name())
-			subEntries, err := ReadEntries(subPath, cfg)
-			if err != nil {
-				continue // Skip unreadable directories
-			}
-			subPrefix := prefix + "│   "
-			if isLast {
-				subPrefix = prefix + "    "
-			}
-			subTree, err := addTreePrefixes(subPath, subEntries, cfg, subPrefix, depth+1)
-			if err != nil {
-				continue // Skip problematic subdirectories
-			}
-			result = append(result, subTree...)
-		}
-	}
-	return result, nil
-}
-
 // render generates output based on entries and configuration.
-// It uses long format if -l is set, otherwise defaults to grid.
 func render(entries []Entry, cfg Config) (string, error) {
+	c := newColorizer()
 	if cfg.Long {
-		return renderLong(entries, cfg), nil
+		return renderLong(entries, cfg, c), nil
 	}
 	if cfg.Tree {
-		return renderTree(entries), nil
+		return renderTree(entries, c), nil
 	}
-	return renderGrid(entries)
-}
-
-// renderTree renders the entries in a tree-like format.
-func renderTree(entries []Entry) string {
-	var sb strings.Builder
-	for _, e := range entries {
-		fmt.Fprintf(&sb, "%s\n", e.name)
-	}
-	return sb.String()
+	return renderGrid(entries, c)
 }

@@ -10,28 +10,26 @@ import (
 )
 
 // renderGrid formats entries into a grid, adapting to terminal width.
-func renderGrid(entries []Entry) (string, error) {
+func renderGrid(entries []Entry, c colorizer) (string, error) {
 	if len(entries) == 0 {
 		return "", nil
 	}
-	names, maxLen := extractNames(entries)
+	maxLen := longestEntryName(entries)
 	termWidth, _ := terminalWidth()
-	cols := min(max(termWidth/(maxLen+2), 1), len(names))
-	rows := (len(names) + cols - 1) / cols
-	return buildGrid(names, maxLen, cols, rows), nil
+	cols := min(max(termWidth/(maxLen+2), 1), len(entries))
+	rows := (len(entries) + cols - 1) / cols
+	return buildGrid(entries, maxLen, cols, rows, c), nil
 }
 
-// extractNames pulls names from entries and finds the longest name length.
-func extractNames(entries []Entry) ([]string, int) {
-	names := make([]string, len(entries))
-	maxLen := 0
-	for i, e := range entries {
-		names[i] = e.name
+// longestEntryName returns the length of the longest name in runes.
+func longestEntryName(entries []Entry) int {
+	var maxLen int
+	for _, e := range entries {
 		if n := utf8.RuneCountInString(e.name); n > maxLen {
 			maxLen = n
 		}
 	}
-	return names, maxLen
+	return maxLen
 }
 
 // terminalWidth gets the terminal width, defaulting to 80 if unavailable.
@@ -48,14 +46,17 @@ func terminalWidth() (int, error) {
 }
 
 // buildGrid constructs the grid string from names.
-func buildGrid(names []string, maxLen, cols, rows int) string {
+func buildGrid(entries []Entry, maxLen, cols, rows int, c colorizer) string {
 	var sb strings.Builder
 	sb.Grow(rows * cols * (maxLen + 2)) // Rough capacity estimate
-	for i, name := range names {
-		sb.WriteString(name)
+
+	for i, e := range entries {
+		colored := c.colorize(classify(entries[i].FileInfo), e.name)
+		sb.WriteString(colored)
+
 		// Pad only if not at end of row and not last item
-		if (i+1)%cols != 0 && i < len(names)-1 {
-			pad := maxLen - utf8.RuneCountInString(name) + 2
+		if (i+1)%cols != 0 && i < len(entries)-1 {
+			pad := maxLen - utf8.RuneCountInString(e.name) + 2
 			sb.WriteString(strings.Repeat(" ", pad))
 		} else {
 			sb.WriteByte('\n')
