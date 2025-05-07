@@ -3,6 +3,7 @@ package entry
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // renderGrid formats entries into a grid, adapting to terminal width.
-func renderGrid(entries []Entry, c colorizer) (string, error) {
+func renderGrid(entries []Entry) (string, error) {
 	if len(entries) == 0 {
 		return "", nil
 	}
@@ -18,14 +19,14 @@ func renderGrid(entries []Entry, c colorizer) (string, error) {
 	termWidth, _ := terminalWidth()
 	cols := min(max(termWidth/(maxLen+2), 1), len(entries))
 	rows := (len(entries) + cols - 1) / cols
-	return buildGrid(entries, maxLen, cols, rows, c), nil
+	return buildGrid(entries, maxLen, cols, rows), nil
 }
 
 // longestEntryName returns the length of the longest name in runes.
 func longestEntryName(entries []Entry) int {
 	var maxLen int
 	for _, e := range entries {
-		if n := utf8.RuneCountInString(e.name); n > maxLen {
+		if n := utf8.RuneCountInString(e.Name()); n > maxLen {
 			maxLen = n
 		}
 	}
@@ -45,18 +46,24 @@ func terminalWidth() (int, error) {
 	return width, nil
 }
 
+// getVisibleWidth returns the visible width of a string by removing ANSI color codes
+func getVisibleWidth(s string) int {
+	ansiPattern := regexp.MustCompile("\x1b\\[[0-9;]*m")
+	cleaned := ansiPattern.ReplaceAllString(s, "")
+	return utf8.RuneCountInString(cleaned)
+}
+
 // buildGrid constructs the grid string from names.
-func buildGrid(entries []Entry, maxLen, cols, rows int, c colorizer) string {
+func buildGrid(entries []Entry, maxLen, cols, rows int) string {
 	var sb strings.Builder
 	sb.Grow(rows * cols * (maxLen + 2)) // Rough capacity estimate
-
 	for i, e := range entries {
-		colored := c.colorize(classify(entries[i].FileInfo), e.name)
-		sb.WriteString(colored)
-
+		sb.WriteString(e.displayName)
 		// Pad only if not at end of row and not last item
 		if (i+1)%cols != 0 && i < len(entries)-1 {
-			pad := maxLen - utf8.RuneCountInString(e.name) + 2
+			// Calculate visible width of the displayName
+			visibleWidth := getVisibleWidth(e.displayName)
+			pad := maxLen - visibleWidth + 2
 			sb.WriteString(strings.Repeat(" ", pad))
 		} else {
 			sb.WriteByte('\n')

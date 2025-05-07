@@ -24,12 +24,12 @@ type widths struct {
 }
 
 // renderLong renders a detailed view of file entries, aligned in columns.
-func renderLong(entries []Entry, cfg Config, c colorizer) string {
+func renderLong(entries []Entry, cfg Config) string {
 	if len(entries) == 0 {
 		return ""
 	}
-	
-	rows, w := processEntries(entries, cfg, c)
+
+	rows, w := processEntries(entries, cfg)
 	var sb strings.Builder
 	sb.Grow(len(entries) * (w.perms + w.user + w.group + w.mod + w.size + 20))
 
@@ -56,7 +56,7 @@ func renderLong(entries []Entry, cfg Config, c colorizer) string {
 }
 
 // processEntries builds rows and calculates column widths for long-format output.
-func processEntries(entries []Entry, cfg Config, c colorizer) ([]row, widths) {
+func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 	rows := make([]row, len(entries))
 	w := widths{
 		perms: utf8.RuneCountInString("Permissions"),
@@ -68,14 +68,13 @@ func processEntries(entries []Entry, cfg Config, c colorizer) ([]row, widths) {
 
 	for i, e := range entries {
 		u, g := userGroup(e)
-		coloredName := c.colorize(classify(e.FileInfo), e.name)
 		rows[i] = row{
 			perms:   e.Mode().String(),
 			user:    u,
 			group:   g,
 			modTime: formatTime(e.ModTime()),
 			size:    humanReadableSize(e.Size()),
-			name:    coloredName,
+			name:    e.displayName,
 		}
 
 		if e.target != "" {
@@ -86,7 +85,7 @@ func processEntries(entries []Entry, cfg Config, c colorizer) ([]row, widths) {
 					group:   "-",
 					modTime: "-",
 					size:    "-",
-					name:    coloredName,
+					name:    e.displayName,
 					target:  " [nonexist]",
 				}
 				continue
