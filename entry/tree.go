@@ -11,15 +11,14 @@ import (
 func renderTree(entries []Entry) string {
 	var sb strings.Builder
 	for _, e := range entries {
-		sb.WriteString(e.displayName)
+		sb.WriteString(e.DisplayName())
 		sb.WriteByte('\n')
 	}
 	return sb.String()
 }
 
 // addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
-// If a single entry is not a directory, it is returned without a tree structure.
-func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, depth int, c colorizer) ([]Entry, error) {
+func addTreePrefixes(path string, entries []Entry, prefix string, depth int) ([]Entry, error) {
 	estimatedCapacity := len(entries)
 	if depth == 0 {
 		estimatedCapacity++ // For root directory
@@ -36,7 +35,7 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 			return entries, nil
 		}
 		// If `path` is a directory, include it as the root
-		result = append(result, NewEntry(fi, getDisplayName(fi, cfg, c), path, ""))
+		result = append(result, Entry{FileInfo: fi, path: path})
 	}
 
 	for i, e := range entries {
@@ -46,13 +45,12 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 			connector = "└── "
 		}
 
-		// Create new entry with colored name + uncolored prefix
-		coloredEntry := NewEntry(e.FileInfo, prefix+connector+e.displayName, e.path, e.target)
-		result = append(result, coloredEntry)
+		e.treePrefix = prefix + connector
+		result = append(result, e)
 
 		if e.IsDir() {
 			subPath := filepath.Join(e.path, e.Name())
-			subEntries, err := ReadEntries(subPath, cfg, c)
+			subEntries, err := readEntries(subPath)
 			if err != nil {
 				continue // Skip unreadable directories
 			}
@@ -60,7 +58,7 @@ func addTreePrefixes(path string, entries []Entry, cfg Config, prefix string, de
 			if isLast {
 				subPrefix = prefix + "    "
 			}
-			subTree, err := addTreePrefixes(subPath, subEntries, cfg, subPrefix, depth+1, c)
+			subTree, err := addTreePrefixes(subPath, subEntries, subPrefix, depth+1)
 			if err != nil {
 				continue // Skip problematic subdirectories
 			}

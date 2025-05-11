@@ -32,9 +32,8 @@ type boolFlag struct {
 	usage     string
 }
 
-// ParseConfig parses command-line flags and returns the configuration.
-func ParseConfig() (Config, *flag.FlagSet, error) {
-	var cfg Config
+// ParseFlags parses command-line flags and returns the configuration.
+func ParseFlags() (*flag.FlagSet, error) {
 	boolFlags := []boolFlag{
 		{&cfg.All, "a", "all", "include hidden entries"},
 		{&cfg.Grid, "g", "grid", "display as grid (default)"},
@@ -57,12 +56,12 @@ func ParseConfig() (Config, *flag.FlagSet, error) {
 	}
 	args := expandShortFlags(os.Args[1:])
 	if err := f.Parse(args); err != nil {
-		return Config{}, nil, err
+		return nil, err
 	}
 	if !cfg.Long && !cfg.Grid {
 		cfg.Grid = true
 	}
-	return cfg, f, nil
+	return f, nil
 }
 
 // ResolvePath returns the first non-flag argument as a cleaned path,

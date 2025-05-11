@@ -15,51 +15,70 @@ const (
 	typeExec = "ex"
 	typeFile = "fi"
 
-	symDir  = "/"
-	symLink = "@"
-	symExec = "*"
+	symbolDir  = "/"
+	symbolLink = "@"
+	symbolExec = "*"
 
 	execBits     = 0o111 // Executable permission bits
 	specialChars = " \t\n\v\f\r!@#$%^&*()[]{}<>?/|\\~`"
+)
+
+var (
+	cfg   Config
+	color = newColorizer()
 )
 
 // Entry represents a file or directory with its metadata.
 // It embeds os.FileInfo to provide direct access to file information methods (Size, ModTime, IsDir, etc).
 type Entry struct {
 	os.FileInfo
-	displayName string
-	path        string
-	target      string
+	path       string
+	target     string
+	treePrefix string
 }
 
-// NewEntry creates a file/directory entry with metadata.
-func NewEntry(fi os.FileInfo, name, path, target string) Entry {
-	return Entry{
-		FileInfo:    fi,
-		displayName: name,
-		path:        path,
-		target:      target,
+// isHidden reports whether a file is hidden by its name starting with a dot.
+// Returns false for empty filenames to avoid potential panics.
+func (e Entry) isHidden() bool {
+	name := e.Name()
+	return len(name) > 0 && name[0] == '.'
+}
+
+// DisplayName formats the basename of an entry and returns the formatted string.
+func (e Entry) DisplayName() string {
+	name := e.Name()
+	// Quote if needed
+	if strings.ContainsAny(name, specialChars) {
+		name = "'" + name + "'"
 	}
+	colored := color.colorize(e.FileInfo, name)
+	if cfg.Classify {
+		_, symbol := fileType(e.FileInfo)
+		colored += symbol
+	}
+	if e.treePrefix != "" {
+		colored = e.treePrefix + colored
+	}
+	return colored
 }
 
-// PrintEntries prints entries to stdout.
-// It optionally recurses into subdirectories based on Config.Recurse.
-func PrintEntries(path string, cfg Config) error {
-	c := newColorizer()
-	entries, err := ReadEntries(path, cfg, c)
+// PrintEntries prints entries to stdout and, if cfg.Recurse is true,
+// recurses into subdirectories.
+func PrintEntries(path string) error {
+	entries, err := readEntries(path)
 	if err != nil {
 		return err
 	}
 
 	if cfg.Tree {
 		cfg.Recurse = false
-		entries, err = addTreePrefixes(path, entries, cfg, "", 0, c)
+		entries, err = addTreePrefixes(path, entries, "", 0)
 		if err != nil {
 			return fmt.Errorf("tree error: %w", err)
 		}
 	}
 
-	output, err := render(entries, cfg)
+	output, err := render(entries)
 	if err != nil {
 		return fmt.Errorf("render error: %w", err)
 	}
@@ -73,7 +92,7 @@ func PrintEntries(path string, cfg Config) error {
 					subDir = "./" + e.Name()
 				}
 				fmt.Printf("\n%s:\n", subDir)
-				if err := PrintEntries(subDir, cfg); err != nil {
+				if err := PrintEntries(subDir); err != nil {
 					return err
 				}
 			}
@@ -82,71 +101,70 @@ func PrintEntries(path string, cfg Config) error {
 	return nil
 }
 
-// ReadEntries lists entries in path, applying filters from Config.
+// readEntries lists entries in path, applying filters from Config.
 // If path is a file, it returns a single-entry slice or nil if skipped.
-func ReadEntries(path string, cfg Config, c colorizer) ([]Entry, error) {
-	fileInfo, err := os.Lstat(path)
+func readEntries(path string) ([]Entry, error) {
+	fi, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	if !fileInfo.IsDir() {
-		e, included, err := processEntry(path, fileInfo, cfg, c)
-		if err != nil {
+	// Handle single file case
+	if !fi.IsDir() {
+		if e, included, err := processEntry(path, fi); err != nil {
 			return nil, err
-		}
-		if included {
+		} else if included {
 			return []Entry{e}, nil
 		}
 		return nil, nil
 	}
 
-	dirEntries, err := os.ReadDir(path)
+	// Process directory case
+	dirEntries, err := readDir(path)
 	if err != nil {
 		return nil, err
 	}
 
 	entries := make([]Entry, 0, len(dirEntries))
-
 	for _, de := range dirEntries {
-		fileInfo, err := de.Info()
+		fi, err := de.Info()
 		if err != nil {
 			continue // Skip unreadable entries (e.g., permission denied).
 		}
-		e, included, err := processEntry(filepath.Join(path, fileInfo.Name()), fileInfo, cfg, c)
-		if err != nil {
+		if e, included, err := processEntry(filepath.Join(path, fi.Name()), fi); err != nil {
 			continue // Skip problematic entries (e.g., broken symlinks).
-		}
-		if included {
+		} else if included {
 			entries = append(entries, e)
 		}
 	}
 
 	if len(entries) > 1 {
-		sortEntries(entries, cfg)
+		sortEntries(entries)
 	}
 	return entries, nil
 }
 
-// processEntry creates an Entry while applying filters for hidden files and handling symlinks.
-// Returns the Entry and true if it should be included, false if skipped.
-func processEntry(fullPath string, fileInfo os.FileInfo, cfg Config, c colorizer) (Entry, bool, error) {
-	// Skip hidden files unless config.All is true.
-	if !cfg.All && isHidden(fileInfo) {
+// processEntry creates an Entry, filters hidden files, and resolves symlinks.
+// Returns the Entry, a boolean indicating inclusion, and any error.
+func processEntry(path string, fi os.FileInfo) (Entry, bool, error) {
+	e := Entry{
+		FileInfo: fi,
+		path:     path,
+	}
+	// Skip hidden files unless cfg.All is true.
+	if !cfg.All && e.isHidden() {
 		return Entry{}, false, nil
 	}
-	e := NewEntry(fileInfo, getDisplayName(fileInfo, cfg, c), filepath.Dir(fullPath), "")
-
 	// Handle symlinks
-	if fileInfo.Mode()&os.ModeSymlink != 0 {
-		linkTarget, err := os.Readlink(fullPath)
+	if fi.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(path)
 		if err != nil {
-			return Entry{}, false, fmt.Errorf("reading symlink %s: %w", fullPath, err)
+			return Entry{}, false, fmt.Errorf("read symlink %s: %w", path, err)
 		}
-		e.target = linkTarget
+		e.target = target
 		if cfg.Dereference {
 			// Replace entry info with dereferenced target info if available
-			if targetInfo, err := os.Stat(fullPath); err == nil {
+			if targetInfo, err := os.Stat(path); err == nil {
 				e.FileInfo = targetInfo
 				e.target = ""
 			}
@@ -155,61 +173,35 @@ func processEntry(fullPath string, fileInfo os.FileInfo, cfg Config, c colorizer
 	return e, true, nil
 }
 
-// isHidden reports whether a file is hidden by its name starting with a dot.
-// Returns false for empty filenames to avoid potential panics.
-func isHidden(fileInfo os.FileInfo) bool {
-	name := fileInfo.Name()
-	return len(name) > 0 && name[0] == '.'
+// readDir reads directory entries, avoiding the extra sort done by os.ReadDir.
+func readDir(path string) ([]os.DirEntry, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.ReadDir(-1)
 }
 
-// fileType returns a short type code for the given file (e.g. "di", "ln").
-func fileType(info os.FileInfo) string {
-	mode := info.Mode()
+// fileType classifies a file and returns its type identifier and display symbol.
+// Returns two strings: (typeIdentifier, displaySymbol)
+func fileType(fi os.FileInfo) (string, string) {
 	switch {
-	case mode.IsDir():
-		return typeDir
-	case mode&os.ModeSymlink != 0:
-		return typeLink
-	case mode.Perm()&execBits != 0:
-		return typeExec
+	case fi.IsDir():
+		return typeDir, symbolDir
+	case fi.Mode()&os.ModeSymlink != 0:
+		return typeLink, symbolLink
+	case fi.Mode().Perm()&execBits != 0:
+		return typeExec, symbolExec
 	default:
-		return typeFile
+		return typeFile, ""
 	}
 }
 
-// quoteSpecialChars checks if the name contains special characters and quotes it.
-func quoteSpecialChars(name string) string {
-	if strings.ContainsAny(name, specialChars) {
-		return "'" + name + "'"
-	}
-	return name
-}
-
-// getDisplayName returns the formatted file name, quoting special characters
-// and appending a classification symbol if enabled.
-func getDisplayName(info os.FileInfo, cfg Config, c colorizer) string {
-	name := quoteSpecialChars(info.Name())
-	infoType := fileType(info)
-	colored := c.colorize(infoType, name)
-	if cfg.Classify {
-		switch infoType {
-		case typeDir:
-			return colored + symDir
-		case typeLink:
-			if cfg.Grid {
-				return colored + symLink
-			}
-		case typeExec:
-			return colored + symExec
-		}
-	}
-	return colored
-}
-
-// render generates output based on entries and configuration.
-func render(entries []Entry, cfg Config) (string, error) {
+// render generates a string representation of the entries based on configuration settings,
+func render(entries []Entry) (string, error) {
 	if cfg.Long {
-		return renderLong(entries, cfg), nil
+		return renderLong(entries), nil
 	}
 	if cfg.Tree {
 		return renderTree(entries), nil

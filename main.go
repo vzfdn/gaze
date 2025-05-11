@@ -8,16 +8,16 @@ import (
 )
 
 func main() {
-	cfg, f, err := entry.ParseConfig()
+	flags, err := entry.ParseFlags()
 	if err != nil {
 		os.Exit(1)
 	}
-	path, err := entry.ResolvePath(f)
+	path, err := entry.ResolvePath(flags)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	err = entry.PrintEntries(path, cfg)
+	err = entry.PrintEntries(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(2)

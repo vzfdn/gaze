@@ -24,12 +24,12 @@ type widths struct {
 }
 
 // renderLong renders a detailed view of file entries, aligned in columns.
-func renderLong(entries []Entry, cfg Config) string {
+func renderLong(entries []Entry) string {
 	if len(entries) == 0 {
 		return ""
 	}
 
-	rows, w := processEntries(entries, cfg)
+	rows, w := processEntries(entries)
 	var sb strings.Builder
 	sb.Grow(len(entries) * (w.perms + w.user + w.group + w.mod + w.size + 20))
 
@@ -56,7 +56,7 @@ func renderLong(entries []Entry, cfg Config) string {
 }
 
 // processEntries builds rows and calculates column widths for long-format output.
-func processEntries(entries []Entry, cfg Config) ([]row, widths) {
+func processEntries(entries []Entry) ([]row, widths) {
 	rows := make([]row, len(entries))
 	w := widths{
 		perms: utf8.RuneCountInString("Permissions"),
@@ -74,7 +74,7 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 			group:   g,
 			modTime: formatTime(e.ModTime()),
 			size:    humanReadableSize(e.Size()),
-			name:    e.displayName,
+			name:    e.DisplayName(),
 		}
 
 		if e.target != "" {
@@ -85,7 +85,7 @@ func processEntries(entries []Entry, cfg Config) ([]row, widths) {
 					group:   "-",
 					modTime: "-",
 					size:    "-",
-					name:    e.displayName,
+					name:    e.DisplayName(),
 					target:  " [nonexist]",
 				}
 				continue

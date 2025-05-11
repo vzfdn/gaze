@@ -26,7 +26,8 @@ func renderGrid(entries []Entry) (string, error) {
 func longestEntryName(entries []Entry) int {
 	var maxLen int
 	for _, e := range entries {
-		if n := utf8.RuneCountInString(e.Name()); n > maxLen {
+		displayName := e.DisplayName()
+		if n := getVisibleWidth(displayName); n > maxLen {
 			maxLen = n
 		}
 	}
@@ -58,11 +59,12 @@ func buildGrid(entries []Entry, maxLen, cols, rows int) string {
 	var sb strings.Builder
 	sb.Grow(rows * cols * (maxLen + 2)) // Rough capacity estimate
 	for i, e := range entries {
-		sb.WriteString(e.displayName)
+		displayName := e.DisplayName()
+		sb.WriteString(displayName)
 		// Pad only if not at end of row and not last item
 		if (i+1)%cols != 0 && i < len(entries)-1 {
 			// Calculate visible width of the displayName
-			visibleWidth := getVisibleWidth(e.displayName)
+			visibleWidth := getVisibleWidth(displayName)
 			pad := maxLen - visibleWidth + 2
 			sb.WriteString(strings.Repeat(" ", pad))
 		} else {
