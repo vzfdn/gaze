@@ -34,7 +34,6 @@ Then run it with:
 ## Example
 
 ![gaze terminal demo](./img/demo.png)
-*Demonstrating long view with color highlighting*
 
 ## Flags
 
