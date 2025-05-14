@@ -54,4 +54,3 @@ Then run it with:
 ## Todo
 
 - Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
-- Colorization: Enable colored output
