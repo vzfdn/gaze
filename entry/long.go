@@ -7,117 +7,141 @@ import (
 	"unicode/utf8"
 )
 
-// row represents a single file entry for long format rendering.
+const (
+	HeaderPerms    = "Permissions"
+	HeaderUser     = "User"
+	HeaderGroup    = "Group"
+	HeaderModified = "Date Modified"
+	HeaderSize     = "Size"
+	HeaderName     = "Name"
+
+	LabelFiles = "Files"
+	LabelFile  = "File"
+
+	PlaceholderPerms    = "----------"
+	PlaceholderField    = "-"
+	PlaceholderNonexist = " [nonexist]"
+
+	linkPrefix = " -> "
+
+	TimeFormatCurrentYear = "Jan 02 15:04"
+	TimeFormatOlderYear   = "Jan 02  2006"
+)
+
 type row struct {
 	perms   string
 	user    string
 	group   string
-	modTime string
 	size    string
+	modTime string
 	name    string
 	target  string
 }
 
-// widths holds the maximum column widths for long format rendering.
-type widths struct {
-	perms, user, group, mod, size int
+type columnWidths struct {
+	perms, user, group, size, mod int
 }
 
-// renderLong renders a detailed view of file entries, aligned in columns.
 func renderLong(entries []Entry) string {
 	if len(entries) == 0 {
 		return ""
 	}
 
-	rows, w := processEntries(entries)
+	rows, cw := buildDisplayTable(entries)
 	var sb strings.Builder
-	sb.Grow(len(entries) * (w.perms + w.user + w.group + w.mod + w.size + 20))
+	sb.Grow(len(entries) * (cw.perms + cw.user + cw.group + cw.size + cw.mod + 20))
 
-	files := "Files"
+	files := LabelFiles
 	if len(entries) == 1 {
-		files = "File"
+		files = LabelFile
 	}
 	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
 
 	if cfg.Header {
-		fmt.Fprintf(&sb, "%-*s %-*s %-*s %-*s %*s %s\n",
-			w.perms, "Permissions",
-			w.user, "User",
-			w.group, "Group",
-			w.mod, "Modified",
-			w.size, "Size",
-			"Name",
+		fmt.Fprintf(&sb, "%s %s %s %s %s %s\n",
+			padToWidth(HeaderPerms, cw.perms, false),
+			padToWidth(HeaderUser, cw.user, false),
+			padToWidth(HeaderGroup, cw.group, false),
+			padToWidth(HeaderSize, cw.size, true),
+			padToWidth(HeaderModified, cw.mod, false),
+			HeaderName,
 		)
 	}
 	for _, r := range rows {
-		formatRow(&sb, r, w)
+		formatRow(&sb, r, cw)
 	}
 	return sb.String()
 }
 
-// processEntries builds rows and calculates column widths for long-format output.
-func processEntries(entries []Entry) ([]row, widths) {
+func buildDisplayTable(entries []Entry) ([]row, columnWidths) {
 	rows := make([]row, len(entries))
-	w := widths{
-		perms: utf8.RuneCountInString("Permissions"),
-		user:  utf8.RuneCountInString("User"),
-		group: utf8.RuneCountInString("Group"),
-		mod:   utf8.RuneCountInString("Modified"),
-		size:  utf8.RuneCountInString("Size"),
+	cw := columnWidths{
+		perms: utf8.RuneCountInString(HeaderPerms),
+		user:  utf8.RuneCountInString(HeaderUser),
+		group: utf8.RuneCountInString(HeaderGroup),
+		size:  utf8.RuneCountInString(HeaderSize),
+		mod:   utf8.RuneCountInString(HeaderModified),
 	}
 
 	for i, e := range entries {
 		u, g := userGroup(e)
 		rows[i] = row{
-			perms:   e.Mode().String(),
-			user:    u,
-			group:   g,
-			modTime: formatTime(e.ModTime()),
-			size:    humanReadableSize(e.Size()),
+			perms:   color.permissions(e.Mode()),
+			user:    color.user(u),
+			group:   color.group(g),
+			size:    formatSize(e.Size()),
+			modTime: color.modTime(formatModTime(e.ModTime())),
 			name:    e.DisplayName(),
 		}
 
-		if e.target != "" {
+		if e.link != nil {
 			if cfg.Dereference {
 				rows[i] = row{
-					perms:   "----------",
-					user:    "-",
-					group:   "-",
-					modTime: "-",
-					size:    "-",
+					perms:   color.placeholder(PlaceholderPerms),
+					user:    color.placeholder(PlaceholderField),
+					group:   color.placeholder(PlaceholderField),
+					size:    color.placeholder(PlaceholderField),
+					modTime: color.placeholder(PlaceholderField),
 					name:    e.DisplayName(),
-					target:  " [nonexist]",
+					target:  PlaceholderNonexist,
 				}
 				continue
 			}
-			rows[i].target = " -> " + e.target
-			rows[i].size = humanReadableSize(int64(len(e.target)))
+			rows[i].target = linkPrefix + e.link.target
+			rows[i].size = formatSize(int64(len(e.link.target)))
 		}
 
 		r := rows[i]
-		w.perms = max(w.perms, utf8.RuneCountInString(r.perms))
-		w.user = max(w.user, utf8.RuneCountInString(r.user))
-		w.group = max(w.group, utf8.RuneCountInString(r.group))
-		w.mod = max(w.mod, utf8.RuneCountInString(r.modTime))
-		w.size = max(w.size, utf8.RuneCountInString(r.size))
+		cw.perms = max(cw.perms, visibleWidth(r.perms))
+		cw.user = max(cw.user, visibleWidth(r.user))
+		cw.group = max(cw.group, visibleWidth(r.group))
+		cw.size = max(cw.size, visibleWidth(r.size))
+		cw.mod = max(cw.mod, visibleWidth(r.modTime))
 	}
-	return rows, w
+	return rows, cw
 }
 
-// formatRow appends a formatted row with aligned columns to the builder.
-func formatRow(sb *strings.Builder, r row, w widths) {
-	fmt.Fprintf(sb, "%-*s %-*s %-*s %-*s %*s %s%s\n",
-		w.perms, r.perms,
-		w.user, r.user,
-		w.group, r.group,
-		w.mod, r.modTime,
-		w.size, r.size,
-		r.name, r.target,
+func formatRow(sb *strings.Builder, r row, cw columnWidths) {
+	fmt.Fprintf(sb, "%s %s %s %s %s %s%s\n",
+		padToWidth(r.perms, cw.perms, false),
+		padToWidth(r.user, cw.user, false),
+		padToWidth(r.group, cw.group, false),
+		padToWidth(r.size, cw.size, true),
+		padToWidth(r.modTime, cw.mod, false),
+		r.name,
+		r.target,
 	)
 }
 
-// humanReadableSize converts bytes to a human-readable string (e.g., "1.2M").
-func humanReadableSize(size int64) string {
+func padToWidth(s string, width int, rightAlign bool) string {
+	padding := strings.Repeat(" ", width-visibleWidth(s))
+	if rightAlign {
+		return padding + s
+	}
+	return s + padding
+}
+
+func formatSize(size int64) string {
 	const (
 		_ = 1 << (iota * 10)
 		K
@@ -132,35 +156,33 @@ func humanReadableSize(size int64) string {
 	}
 	switch {
 	case size < K:
-		return fmt.Sprintf("%d", size)
+		return color.colorize(fmt.Sprintf("%d", size), colorSizeBytes)
 	case size < M:
-		return fmt.Sprintf("%.1fK", float64(size)/K)
+		return color.colorize(fmt.Sprintf("%.1fK", float64(size)/K), colorSizeKB)
 	case size < G:
-		return fmt.Sprintf("%.1fM", float64(size)/M)
+		return color.colorize(fmt.Sprintf("%.1fM", float64(size)/M), colorSizeMB)
 	case size < T:
-		return fmt.Sprintf("%.1fG", float64(size)/G)
+		return color.colorize(fmt.Sprintf("%.1fG", float64(size)/G), colorSizeGB)
 	case size < P:
-		return fmt.Sprintf("%.1fT", float64(size)/T)
+		return color.colorize(fmt.Sprintf("%.1fT", float64(size)/T), colorSizeTB)
 	case size < E:
-		return fmt.Sprintf("%.1fP", float64(size)/P)
+		return color.colorize(fmt.Sprintf("%.1fP", float64(size)/P), colorSizePB)
 	default:
-		return fmt.Sprintf("%.1fE", float64(size)/E)
+		return color.colorize(fmt.Sprintf("%.1fE", float64(size)/E), colorSizePB)
 	}
 }
 
-// totalSize returns the total size of entries in human-readable format.
 func totalSize(entries []Entry) string {
 	var t int64
 	for _, e := range entries {
 		t += e.Size()
 	}
-	return humanReadableSize(t)
+	return formatSize(t)
 }
 
-// formatTime returns the formatted time.
-func formatTime(t time.Time) string {
+func formatModTime(t time.Time) string {
 	if t.Year() == time.Now().Year() {
-		return t.Format("Jan 02 15:04")
+		return t.Format(TimeFormatCurrentYear)
 	}
-	return t.Format("Jan 02  2006")
+	return t.Format(TimeFormatOlderYear)
 }

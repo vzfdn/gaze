@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// sortEntries sorts entries according to the given configuration.
 func sortEntries(entries []Entry) {
 	switch {
 	case cfg.Size:
@@ -26,28 +25,24 @@ func sortEntries(entries []Entry) {
 	}
 }
 
-// sortByExt sorts entries alphabetically by file name.
 func sortByName(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
 		return cmp.Compare(strings.ToLower(a.Name()), strings.ToLower(b.Name()))
 	})
 }
 
-// sortBySize sorts entries in descending order by file size.
 func sortBySize(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
 		return cmp.Compare(b.Size(), a.Size())
 	})
 }
 
-// sortByTime sorts entries in descending order by modification time.
 func sortByTime(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
 		return cmp.Compare(b.ModTime().Unix(), a.ModTime().Unix())
 	})
 }
 
-// sortByKind sorts entries by file type (directories first, then files).
 func sortByKind(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
 		if a.IsDir() && !b.IsDir() {
@@ -60,7 +55,6 @@ func sortByKind(entries []Entry) {
 	})
 }
 
-// sortByExt sorts entries alphabetically by file extension.
 func sortByExt(entries []Entry) {
 	slices.SortStableFunc(entries, func(a, b Entry) int {
 		extA, extB := filepath.Ext(a.Name()), filepath.Ext(b.Name())
@@ -72,7 +66,6 @@ func sortByExt(entries []Entry) {
 	})
 }
 
-// reverse reverses the order of entries in-place.
 func reverse(entries []Entry) {
 	slices.Reverse(entries)
 }

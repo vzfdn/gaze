@@ -7,7 +7,13 @@ import (
 	"strings"
 )
 
-// renderTree renders the entries in a tree-like format.
+const (
+	connectorBranch = "├── "
+	connectorLast   = "└── "
+	subPrefix       = "│   "
+	subPrefixLast   = "    "
+)
+
 func renderTree(entries []Entry) string {
 	var sb strings.Builder
 	for _, e := range entries {
@@ -23,7 +29,7 @@ func addTreePrefixes(path string, entries []Entry, prefix string, depth int) ([]
 	if depth == 0 {
 		estimatedCapacity++ // For root directory
 	}
-	result := make([]Entry, 0, estimatedCapacity)
+	tree := make([]Entry, 0, estimatedCapacity)
 
 	if depth == 0 {
 		fi, err := os.Stat(path)
@@ -35,35 +41,37 @@ func addTreePrefixes(path string, entries []Entry, prefix string, depth int) ([]
 			return entries, nil
 		}
 		// If `path` is a directory, include it as the root
-		result = append(result, Entry{FileInfo: fi, path: path})
+		tree = append(tree, Entry{FileInfo: fi, path: path})
 	}
 
 	for i, e := range entries {
 		isLast := i == len(entries)-1
-		connector := "├── "
+		connector := connectorBranch
 		if isLast {
-			connector = "└── "
+			connector = connectorLast
 		}
 
-		e.treePrefix = prefix + connector
-		result = append(result, e)
+		e.treePrefix = color.treePrefix(prefix + connector)
+		tree = append(tree, e)
 
+		// collect subdirectory entries
 		if e.IsDir() {
-			subPath := filepath.Join(e.path, e.Name())
+			subPath := filepath.Join(path, e.Name())
 			subEntries, err := readEntries(subPath)
 			if err != nil {
 				continue // Skip unreadable directories
 			}
-			subPrefix := prefix + "│   "
+			subPrefixNext := prefix + subPrefix
 			if isLast {
-				subPrefix = prefix + "    "
+				subPrefixNext = prefix + subPrefixLast
 			}
-			subTree, err := addTreePrefixes(subPath, subEntries, subPrefix, depth+1)
+			subTree, err := addTreePrefixes(subPath, subEntries, subPrefixNext, depth+1)
 			if err != nil {
 				continue // Skip problematic subdirectories
 			}
-			result = append(result, subTree...)
+			tree = append(tree, subTree...)
 		}
 	}
-	return result, nil
+
+	return tree, nil
 }

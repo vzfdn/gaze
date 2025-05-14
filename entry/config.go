@@ -24,7 +24,6 @@ type Config struct {
 	Reverse     bool
 }
 
-// boolFlag defines a flag with short/long names and a description.
 type boolFlag struct {
 	ptr       *bool
 	shortName string
@@ -32,9 +31,8 @@ type boolFlag struct {
 	usage     string
 }
 
-// ParseFlags parses command-line flags and returns the configuration.
-func ParseFlags() (*flag.FlagSet, error) {
-	boolFlags := []boolFlag{
+func boolFlags() []boolFlag {
+	return []boolFlag{
 		{&cfg.All, "a", "all", "include hidden entries"},
 		{&cfg.Grid, "g", "grid", "display as grid (default)"},
 		{&cfg.Long, "l", "long", "detailed listing format"},
@@ -49,11 +47,16 @@ func ParseFlags() (*flag.FlagSet, error) {
 		{&cfg.Ext, "x", "extension", "sort by file extension"},
 		{&cfg.Reverse, "r", "reverse", "reverse the sorting order"},
 	}
+}
+
+// ParseFlags parses command-line flags and returns the configuration.
+func ParseFlags() (*flag.FlagSet, error) {
 	f := flag.NewFlagSet(filepath.Base(os.Args[0]), flag.ContinueOnError)
-	for _, bf := range boolFlags {
+	for _, bf := range boolFlags() {
 		f.BoolVar(bf.ptr, bf.shortName, false, bf.usage)
 		f.BoolVar(bf.ptr, bf.longName, false, "alias for -"+bf.shortName)
 	}
+
 	args := expandShortFlags(os.Args[1:])
 	if err := f.Parse(args); err != nil {
 		return nil, err

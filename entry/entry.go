@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	typeDir  = "di"
-	typeLink = "ln"
-	typeExec = "ex"
-	typeFile = "fi"
+	typeDir        = "di"
+	typeLink       = "ln"
+	typeBrokenLink = "or"
+	typeExec       = "ex"
+	typeFile       = "fi"
 
 	symbolDir  = "/"
 	symbolLink = "@"
@@ -33,13 +34,31 @@ var (
 type Entry struct {
 	os.FileInfo
 	path       string
-	target     string
 	treePrefix string
+	link       *symlink
 }
 
-// isHidden reports whether a file is hidden by its name starting with a dot.
+// Classify classifies an entry and returns its type identifier and display symbol.
+// Returns two strings: (typeIdentifier, displaySymbol)
+func (e Entry) Classify() (string, string) {
+	if e.link != nil {
+		if e.link.isBroken {
+			return typeBrokenLink, symbolLink
+		}
+		return typeLink, symbolLink
+	}
+	if e.IsDir() {
+		return typeDir, symbolDir
+	}
+	if e.Mode()&execBits != 0 {
+		return typeExec, symbolExec
+	}
+	return typeFile, ""
+}
+
+// IsHidden reports whether a file is hidden by its name starting with a dot.
 // Returns false for empty filenames to avoid potential panics.
-func (e Entry) isHidden() bool {
+func (e Entry) IsHidden() bool {
 	name := e.Name()
 	return len(name) > 0 && name[0] == '.'
 }
@@ -51,15 +70,21 @@ func (e Entry) DisplayName() string {
 	if strings.ContainsAny(name, specialChars) {
 		name = "'" + name + "'"
 	}
-	colored := color.colorize(e.FileInfo, name)
+	colored := color.fileName(e, name)
 	if cfg.Classify {
-		_, symbol := fileType(e.FileInfo)
+		_, symbol := e.Classify()
 		colored += symbol
 	}
 	if e.treePrefix != "" {
 		colored = e.treePrefix + colored
 	}
 	return colored
+}
+
+type symlink struct {
+	os.FileInfo
+	target   string
+	isBroken bool
 }
 
 // PrintEntries prints entries to stdout and, if cfg.Recurse is true,
@@ -71,7 +96,6 @@ func PrintEntries(path string) error {
 	}
 
 	if cfg.Tree {
-		cfg.Recurse = false
 		entries, err = addTreePrefixes(path, entries, "", 0)
 		if err != nil {
 			return fmt.Errorf("tree error: %w", err)
@@ -84,7 +108,8 @@ func PrintEntries(path string) error {
 	}
 	fmt.Fprint(os.Stdout, output)
 
-	if cfg.Recurse {
+	// Recurse only if enabled and tree mode is off.
+	if cfg.Recurse && !cfg.Tree {
 		for _, e := range entries {
 			if e.IsDir() {
 				subDir := filepath.Join(path, e.Name())
@@ -98,11 +123,10 @@ func PrintEntries(path string) error {
 			}
 		}
 	}
+
 	return nil
 }
 
-// readEntries lists entries in path, applying filters from Config.
-// If path is a file, it returns a single-entry slice or nil if skipped.
 func readEntries(path string) ([]Entry, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
@@ -144,32 +168,47 @@ func readEntries(path string) ([]Entry, error) {
 	return entries, nil
 }
 
-// processEntry creates an Entry, filters hidden files, and resolves symlinks.
-// Returns the Entry, a boolean indicating inclusion, and any error.
 func processEntry(path string, fi os.FileInfo) (Entry, bool, error) {
 	e := Entry{
 		FileInfo: fi,
 		path:     path,
 	}
-	// Skip hidden files unless cfg.All is true.
-	if !cfg.All && e.isHidden() {
+
+	// Skip hidden files unless -a/--all is set
+	if !cfg.All && e.IsHidden() {
 		return Entry{}, false, nil
 	}
+
 	// Handle symlinks
 	if fi.Mode()&os.ModeSymlink != 0 {
 		target, err := os.Readlink(path)
 		if err != nil {
-			return Entry{}, false, fmt.Errorf("read symlink %s: %w", path, err)
-		}
-		e.target = target
-		if cfg.Dereference {
-			// Replace entry info with dereferenced target info if available
-			if targetInfo, err := os.Stat(path); err == nil {
-				e.FileInfo = targetInfo
-				e.target = ""
+			// Broken symlink: can't resolve target
+			e.link = &symlink{
+				FileInfo: fi,
+				target:   "",
+				isBroken: true,
 			}
+			return e, true, nil
+		}
+		e.link = &symlink{
+			FileInfo: fi,
+			target:   target,
+			isBroken: false,
+		}
+		// Stat to detect broken links
+		if targetInfo, err := os.Stat(path); err == nil {
+			if cfg.Dereference {
+				// Replace with dereferenced info if -L is set
+				e.link.FileInfo = targetInfo
+				e.link.target = ""
+				e.FileInfo = targetInfo
+			}
+		} else {
+			e.link.isBroken = true
 		}
 	}
+
 	return e, true, nil
 }
 
@@ -183,22 +222,6 @@ func readDir(path string) ([]os.DirEntry, error) {
 	return f.ReadDir(-1)
 }
 
-// fileType classifies a file and returns its type identifier and display symbol.
-// Returns two strings: (typeIdentifier, displaySymbol)
-func fileType(fi os.FileInfo) (string, string) {
-	switch {
-	case fi.IsDir():
-		return typeDir, symbolDir
-	case fi.Mode()&os.ModeSymlink != 0:
-		return typeLink, symbolLink
-	case fi.Mode().Perm()&execBits != 0:
-		return typeExec, symbolExec
-	default:
-		return typeFile, ""
-	}
-}
-
-// render generates a string representation of the entries based on configuration settings,
 func render(entries []Entry) (string, error) {
 	if cfg.Long {
 		return renderLong(entries), nil
