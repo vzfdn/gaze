@@ -3,18 +3,15 @@
 package entry
 
 import (
-	"path/filepath"
-
 	"golang.org/x/sys/windows"
 )
 
 // userGroup retrieves the file owner and group names for the Entry.
 // Falls back to SID strings if names cannot be resolved.
 func userGroup(e Entry) (string, string) {
-	path := filepath.Join(e.path, e.Name())
 	securityFlags := windows.OWNER_SECURITY_INFORMATION | windows.GROUP_SECURITY_INFORMATION
 	sd, err := windows.GetNamedSecurityInfo(
-		path,
+		e.path,
 		windows.SE_FILE_OBJECT,
 		windows.SECURITY_INFORMATION(securityFlags),
 	)
