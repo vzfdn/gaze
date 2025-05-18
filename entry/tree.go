@@ -44,19 +44,19 @@ func addTreePrefixes(path string, entries []Entry, prefix string, depth int) ([]
 		tree = append(tree, Entry{FileInfo: fi, path: path})
 	}
 
-	for i, e := range entries {
+	for i := range entries {
 		isLast := i == len(entries)-1
 		connector := connectorBranch
 		if isLast {
 			connector = connectorLast
 		}
 
-		e.treePrefix = color.treePrefix(prefix + connector)
-		tree = append(tree, e)
+		entries[i].treePrefix = color.treePrefix(prefix + connector)
+		tree = append(tree, entries[i])
 
 		// collect subdirectory entries
-		if e.IsDir() {
-			subPath := filepath.Join(path, e.Name())
+		if entries[i].IsDir() {
+			subPath := filepath.Join(path, entries[i].Name())
 			subEntries, err := readEntries(subPath)
 			if err != nil {
 				continue // Skip unreadable directories
