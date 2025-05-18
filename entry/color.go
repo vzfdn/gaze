@@ -12,7 +12,7 @@ import (
 
 const (
 	colorReadPerm    = "38;5;189" // Light lavender
-	colorWritePerm   = "38;5;54"  // Dark purple
+	colorWritePerm   = "38;5;140" // Medium purple
 	colorExecPerm    = "38;5;98"  // Medium purple
 	colorUser        = "38;5;97"  // Medium purple-blue
 	colorGroup       = "38;5;147" // Light purple
