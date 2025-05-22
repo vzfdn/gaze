@@ -38,7 +38,7 @@ var (
 		typeExec: "32", // green
 		typeFile: "0",  // default
 	}
-	ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*m`) // matches ANSI color codes
+	ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*m`) // Matches ANSI color codes
 )
 
 type colorizer struct {
@@ -54,7 +54,7 @@ func newColorizer() colorizer {
 }
 
 func (c colorizer) disabled() bool {
-	return !c.isTTY
+	return !c.isTTY || cfg.NoColor
 }
 
 func (c colorizer) colorCode(e Entry, fileName string) string {
@@ -91,22 +91,32 @@ func (c colorizer) fileName(e Entry, fileName string) string {
 }
 
 func (c colorizer) permissions(mode os.FileMode) string {
+	if c.disabled() {
+		return mode.String()
+	}
+	// Preallocate buffer to avoid repeated allocations
+	const colorizedCharLen = len(ansiEscapePrefix) + len(colorReadPerm) + 1 + 1 + len(resetCode)
 	permStr := mode.String()
 	var sb strings.Builder
-	sb.Grow(len(permStr) * 15)
-	for _, perm := range permStr {
+	sb.Grow(len(permStr) * colorizedCharLen)
+	for i := range permStr {
+		ch := permStr[i]
 		var color string
-		switch perm {
+		switch ch {
 		case 'r':
 			color = colorReadPerm
 		case 'w':
 			color = colorWritePerm
-		case 'x':
+		case 'x', 's', 'S', 't', 'T':
 			color = colorExecPerm
 		default:
 			color = colorPlaceholder
 		}
-		sb.WriteString(c.colorize(string(perm), color))
+		sb.WriteString(ansiEscapePrefix)
+		sb.WriteString(color)
+		sb.WriteByte('m')
+		sb.WriteByte(ch)
+		sb.WriteString(resetCode)
 	}
 	return sb.String()
 }

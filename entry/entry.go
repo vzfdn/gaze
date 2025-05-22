@@ -162,7 +162,7 @@ func readEntries(path string) ([]Entry, error) {
 		}
 	}
 
-	if len(entries) > 1 {
+	if len(entries) > 1 && !cfg.NoSort{
 		sortEntries(entries)
 	}
 	return entries, nil

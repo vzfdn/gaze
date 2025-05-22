@@ -22,6 +22,8 @@ type Config struct {
 	Kind        bool
 	Ext         bool
 	Reverse     bool
+	NoColor     bool
+	NoSort      bool
 }
 
 type boolFlag struct {
@@ -46,6 +48,8 @@ func boolFlags() []boolFlag {
 		{&cfg.Kind, "k", "kind", "sort by file type (kind)"},
 		{&cfg.Ext, "x", "extension", "sort by file extension"},
 		{&cfg.Reverse, "r", "reverse", "reverse the sorting order"},
+		{&cfg.NoSort, "U", "no-sort", "do not sort entries"},
+		{&cfg.NoColor, "", "no-color", "do not colorize output"},
 	}
 }
 
