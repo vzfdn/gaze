@@ -1,6 +1,13 @@
 gaze
-gaze.exe
+*.exe
+*.exe~
 *.out
 *.test
-.vscode/
+*.prof
+
+.idea
+.code
+.vscode
+
+build/
 media/
