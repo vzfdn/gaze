@@ -25,7 +25,7 @@ func renderTree(entries []Entry) string {
 
 // addTreePrefixes adds tree-like prefixes to directory entries and collects subdirectory entries.
 func addTreePrefixes(path string, entries []Entry, prefix string, depth int) ([]Entry, error) {
-	estimatedCapacity := len(entries)
+	estimatedCapacity := len(entries) * (depth + 2)
 	if depth == 0 {
 		estimatedCapacity++ // For root directory
 	}

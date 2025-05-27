@@ -28,6 +28,7 @@ const (
 	colorTreePrefix  = "90"       // Gray
 	ansiEscapePrefix = "\x1b["
 	resetCode        = "\x1b[0m"
+	ansiPerField     = len(ansiEscapePrefix) + len(colorReadPerm) + 1 + len(resetCode)
 )
 
 var (
@@ -95,10 +96,9 @@ func (c colorizer) permissions(mode os.FileMode) string {
 		return mode.String()
 	}
 	// Preallocate buffer to avoid repeated allocations
-	const colorizedCharLen = len(ansiEscapePrefix) + len(colorReadPerm) + 1 + 1 + len(resetCode)
 	permStr := mode.String()
 	var sb strings.Builder
-	sb.Grow(len(permStr) * colorizedCharLen)
+	sb.Grow(len(permStr) * ansiPerField)
 	for i := range permStr {
 		ch := permStr[i]
 		var color string

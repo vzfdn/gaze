@@ -4,28 +4,40 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 const (
-	HeaderPerms    = "Permissions"
-	HeaderUser     = "User"
-	HeaderGroup    = "Group"
-	HeaderModified = "Date Modified"
-	HeaderSize     = "Size"
-	HeaderName     = "Name"
+	headerPerms   = "Permissions"
+	headerUser    = "User"
+	headerGroup   = "Group"
+	headerModTime = "Date Modified"
+	headerSize    = "Size"
+	headerName    = "Name"
 
-	LabelFiles = "Files"
-	LabelFile  = "File"
+	labelFiles = "Files"
+	labelFile  = "File"
 
-	PlaceholderPerms    = "----------"
-	PlaceholderField    = "-"
-	PlaceholderNonexist = " [nonexist]"
+	placeholderPerms    = "----------"
+	placeholderField    = "-"
+	placeholderNonexist = " [nonexist]"
+	linkPrefix          = " -> "
 
-	linkPrefix = " -> "
+	timeFormatCurrentYear = "Jan 02 15:04"
+	timeFormatOlderYear   = "Jan 02  2006"
 
-	TimeFormatCurrentYear = "Jan 02 15:04"
-	TimeFormatOlderYear   = "Jan 02  2006"
+	fieldPadding   = 6
+	coloredColumns = 4
+	capacityBuffer = 50
+)
+
+const (
+	_ = 1 << (iota * 10)
+	kb
+	mb
+	gb
+	tb
+	pb
+	eb
 )
 
 type row struct {
@@ -46,95 +58,128 @@ func renderLong(entries []Entry) string {
 	if len(entries) == 0 {
 		return ""
 	}
+	
+	rows, widths := buildTable(entries)
+	summary := summaryLine(entries)
 
-	rows, cw := buildDisplayTable(entries)
 	var sb strings.Builder
-	sb.Grow(len(entries) * (cw.perms + cw.user + cw.group + cw.size + cw.mod + 20))
-
-	files := LabelFiles
-	if len(entries) == 1 {
-		files = LabelFile
-	}
-	fmt.Fprintf(&sb, "%d %s, %s\n", len(entries), files, totalSize(entries))
+	sb.Grow(estimateCapacity(rows, widths) + len(summary))
+	sb.WriteString(summary)
 
 	if cfg.Header {
-		fmt.Fprintf(&sb, "%s %s %s %s %s %s\n",
-			padToWidth(HeaderPerms, cw.perms, false),
-			padToWidth(HeaderUser, cw.user, false),
-			padToWidth(HeaderGroup, cw.group, false),
-			padToWidth(HeaderSize, cw.size, true),
-			padToWidth(HeaderModified, cw.mod, false),
-			HeaderName,
-		)
+		header := row{
+			perms:   headerPerms,
+			user:    headerUser,
+			group:   headerGroup,
+			size:    headerSize,
+			modTime: headerModTime,
+			name:    headerName,
+		}
+		writeRow(&sb, header, widths)
 	}
+
 	for _, r := range rows {
-		formatRow(&sb, r, cw)
+		writeRow(&sb, r, widths)
 	}
 	return sb.String()
 }
 
-func buildDisplayTable(entries []Entry) ([]row, columnWidths) {
-	rows := make([]row, len(entries))
-	cw := columnWidths{
-		perms: utf8.RuneCountInString(HeaderPerms),
-		user:  utf8.RuneCountInString(HeaderUser),
-		group: utf8.RuneCountInString(HeaderGroup),
-		size:  utf8.RuneCountInString(HeaderSize),
-		mod:   utf8.RuneCountInString(HeaderModified),
+func summaryLine(entries []Entry) string {
+	label := labelFiles
+	if len(entries) == 1 {
+		label = labelFile
 	}
-
-	for i, e := range entries {
-		u, g := userGroup(e)
-		rows[i] = row{
-			perms:   color.permissions(e.Mode()),
-			user:    color.user(u),
-			group:   color.group(g),
-			size:    formatSize(e.Size()),
-			modTime: color.modTime(formatModTime(e.ModTime())),
-			name:    e.DisplayName(),
-		}
-
-		if e.link != nil {
-			if cfg.Dereference {
-				rows[i] = row{
-					perms:   color.placeholder(PlaceholderPerms),
-					user:    color.placeholder(PlaceholderField),
-					group:   color.placeholder(PlaceholderField),
-					size:    color.placeholder(PlaceholderField),
-					modTime: color.placeholder(PlaceholderField),
-					name:    e.DisplayName(),
-					target:  PlaceholderNonexist,
-				}
-				continue
-			}
-			rows[i].target = linkPrefix + e.link.target
-			rows[i].size = formatSize(int64(len(e.link.target)))
-		}
-
-		r := rows[i]
-		cw.perms = max(cw.perms, visibleWidth(r.perms))
-		cw.user = max(cw.user, visibleWidth(r.user))
-		cw.group = max(cw.group, visibleWidth(r.group))
-		cw.size = max(cw.size, visibleWidth(r.size))
-		cw.mod = max(cw.mod, visibleWidth(r.modTime))
-	}
-	return rows, cw
+	return fmt.Sprintf("%d %s, %s\n", len(entries), label, totalSize(entries))
 }
 
-func formatRow(sb *strings.Builder, r row, cw columnWidths) {
+func estimateCapacity(rows []row, widths columnWidths) (capacity int) {
+	if cfg.Header {
+		capacity += len(headerPerms+headerGroup+headerUser+headerSize+headerModTime+headerName) + fieldPadding
+	}
+	baseRowWidth := widths.perms + widths.user + widths.group + widths.size + widths.mod + fieldPadding
+	capacity += len(rows) * baseRowWidth
+	for _, r := range rows {
+		// Add visible width of name and symlink target
+		capacity += visibleWidth(r.name) + len(r.target)
+	}
+	if !cfg.NoColor {
+		// Add capacity for colored output (permissions + metadata fields)
+		capacity += len(rows) * (len(placeholderPerms) + coloredColumns) * ansiPerField
+	}
+	// Add 2% buffer to reduce chance of reallocation
+	capacity += capacity / capacityBuffer
+	return capacity
+}
+
+func writeRow(sb *strings.Builder, r row, widths columnWidths) {
 	fmt.Fprintf(sb, "%s %s %s %s %s %s%s\n",
-		padToWidth(r.perms, cw.perms, false),
-		padToWidth(r.user, cw.user, false),
-		padToWidth(r.group, cw.group, false),
-		padToWidth(r.size, cw.size, true),
-		padToWidth(r.modTime, cw.mod, false),
+		padToWidth(r.perms, widths.perms, false),
+		padToWidth(r.user, widths.user, false),
+		padToWidth(r.group, widths.group, false),
+		padToWidth(r.size, widths.size, true),
+		padToWidth(r.modTime, widths.mod, false),
 		r.name,
 		r.target,
 	)
 }
 
+func buildTable(entries []Entry) ([]row, columnWidths) {
+	var widths columnWidths
+	if cfg.Header {
+		widths = columnWidths{
+			perms: len(headerPerms),
+			user:  len(headerUser),
+			group: len(headerGroup),
+			size:  len(headerSize),
+			mod:   len(headerModTime),
+		}
+	}
+	rows := make([]row, len(entries))
+	for i, entry := range entries {
+		rows[i] = makeRow(entry)
+		widths.perms = max(widths.perms, visibleWidth(rows[i].perms))
+		widths.user = max(widths.user, visibleWidth(rows[i].user))
+		widths.group = max(widths.group, visibleWidth(rows[i].group))
+		widths.size = max(widths.size, visibleWidth(rows[i].size))
+		widths.mod = max(widths.mod, visibleWidth(rows[i].modTime))
+	}
+	return rows, widths
+}
+
+func makeRow(entry Entry) row {
+	if entry.link != nil && cfg.Dereference {
+		return row{
+			perms:   color.placeholder(placeholderPerms),
+			user:    color.placeholder(placeholderField),
+			group:   color.placeholder(placeholderField),
+			size:    color.placeholder(placeholderField),
+			modTime: color.placeholder(placeholderField),
+			name:    entry.DisplayName(),
+			target:  placeholderNonexist,
+		}
+	}
+	user, group := userGroup(entry)
+	r := row{
+		perms:   color.permissions(entry.Mode()),
+		user:    color.user(user),
+		group:   color.group(group),
+		size:    formatSize(entry.Size()),
+		modTime: color.modTime(formatModTime(entry.ModTime())),
+		name:    entry.DisplayName(),
+	}
+	if entry.link != nil {
+		r.target = linkPrefix + entry.link.target
+		r.size = formatSize(int64(len(entry.link.target)))
+	}
+	return r
+}
+
 func padToWidth(s string, width int, rightAlign bool) string {
-	padding := strings.Repeat(" ", width-visibleWidth(s))
+	paddingNeeded := width - visibleWidth(s)
+	if paddingNeeded <= 0 {
+		return s
+	}
+	padding := strings.Repeat(" ", paddingNeeded)
 	if rightAlign {
 		return padding + s
 	}
@@ -142,33 +187,24 @@ func padToWidth(s string, width int, rightAlign bool) string {
 }
 
 func formatSize(size int64) string {
-	const (
-		_ = 1 << (iota * 10)
-		K
-		M
-		G
-		T
-		P
-		E
-	)
 	if size < 0 {
 		size = 0
 	}
 	switch {
-	case size < K:
+	case size < kb:
 		return color.colorize(fmt.Sprintf("%d", size), colorSizeBytes)
-	case size < M:
-		return color.colorize(fmt.Sprintf("%.1fK", float64(size)/K), colorSizeKB)
-	case size < G:
-		return color.colorize(fmt.Sprintf("%.1fM", float64(size)/M), colorSizeMB)
-	case size < T:
-		return color.colorize(fmt.Sprintf("%.1fG", float64(size)/G), colorSizeGB)
-	case size < P:
-		return color.colorize(fmt.Sprintf("%.1fT", float64(size)/T), colorSizeTB)
-	case size < E:
-		return color.colorize(fmt.Sprintf("%.1fP", float64(size)/P), colorSizePB)
+	case size < mb:
+		return color.colorize(fmt.Sprintf("%.1fK", float64(size)/kb), colorSizeKB)
+	case size < gb:
+		return color.colorize(fmt.Sprintf("%.1fM", float64(size)/mb), colorSizeMB)
+	case size < tb:
+		return color.colorize(fmt.Sprintf("%.1fG", float64(size)/gb), colorSizeGB)
+	case size < pb:
+		return color.colorize(fmt.Sprintf("%.1fT", float64(size)/tb), colorSizeTB)
+	case size < eb:
+		return color.colorize(fmt.Sprintf("%.1fP", float64(size)/pb), colorSizePB)
 	default:
-		return color.colorize(fmt.Sprintf("%.1fE", float64(size)/E), colorSizePB)
+		return color.colorize(fmt.Sprintf("%.1fE", float64(size)/eb), colorSizeEB)
 	}
 }
 
@@ -182,7 +218,7 @@ func totalSize(entries []Entry) string {
 
 func formatModTime(t time.Time) string {
 	if t.Year() == time.Now().Year() {
-		return t.Format(TimeFormatCurrentYear)
+		return t.Format(timeFormatCurrentYear)
 	}
-	return t.Format(TimeFormatOlderYear)
+	return t.Format(timeFormatOlderYear)
 }
