@@ -3,7 +3,6 @@ package entry
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -28,19 +27,16 @@ const (
 	colorTreePrefix  = "90"       // Gray
 	ansiEscapePrefix = "\x1b["
 	resetCode        = "\x1b[0m"
-	ansiPerField     = len(ansiEscapePrefix) + len(colorReadPerm) + 1 + len(resetCode)
+	maxAnsiSeqLen    = len(ansiEscapePrefix) + len(colorReadPerm) + 1 + len(resetCode)
 )
 
-var (
-	// Default colors for file types when LS_COLORS is not set.
-	fallbackColors = map[string]string{
-		typeDir:  "34", // blue
-		typeLink: "36", // cyan
-		typeExec: "32", // green
-		typeFile: "0",  // default
-	}
-	ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*m`) // Matches ANSI color codes
-)
+// Default colors for file types when LS_COLORS is not set.
+var fallbackColors = map[string]string{
+	typeDir:  "34", // blue
+	typeLink: "36", // cyan
+	typeExec: "32", // green
+	typeFile: "0",  // default
+}
 
 type colorizer struct {
 	isTTY    bool
@@ -59,18 +55,15 @@ func (c colorizer) disabled() bool {
 }
 
 func (c colorizer) colorCode(e Entry, fileName string) string {
-	// Check for file extension colors first
-	if ext := strings.ToLower(filepath.Ext(fileName)); ext != "" {
+	if ext := filepath.Ext(fileName); ext != "" {
 		if color, ok := c.lsColors["*"+ext]; ok {
 			return color
 		}
 	}
 	fileType, _ := e.Classify()
-	// Fall back to file type colors
 	if color, ok := c.lsColors[fileType]; ok {
 		return color
 	}
-	// Use fallback colors as last resort
 	return fallbackColors[fileType]
 }
 
@@ -98,7 +91,7 @@ func (c colorizer) permissions(mode os.FileMode) string {
 	// Preallocate buffer to avoid repeated allocations
 	permStr := mode.String()
 	var sb strings.Builder
-	sb.Grow(len(permStr) * ansiPerField)
+	sb.Grow(len(permStr) * maxAnsiSeqLen)
 	for i := range permStr {
 		ch := permStr[i]
 		var color string
@@ -142,6 +135,27 @@ func parseLSColors() map[string]string {
 }
 
 func visibleWidth(s string) int {
-	clean := ansiRegexp.ReplaceAllString(s, "")
-	return utf8.RuneCountInString(clean)
+	if !strings.Contains(s, ansiEscapePrefix) {
+		return utf8.RuneCountInString(s)
+	}
+	count := 0
+	for i := 0; i < len(s); {
+		// Detect ANSI sequence start
+		if i+1 < len(s) && s[i] == ansiEscapePrefix[0] && s[i+1] == ansiEscapePrefix[1] {
+			// Skip prefix and code until 'm'.
+			i += len(ansiEscapePrefix)
+			for i < len(s) && s[i] != 'm' {
+				i++
+			}
+			if i < len(s) {
+				i++ // Skip 'm'
+			}
+			continue
+		}
+		// Count visible rune and advance by its byte length.
+		_, size := utf8.DecodeRuneInString(s[i:])
+		count++
+		i += size
+	}
+	return count
 }

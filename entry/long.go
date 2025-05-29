@@ -104,7 +104,7 @@ func estimateCapacity(rows []row, widths columnWidths) (capacity int) {
 	}
 	if !cfg.NoColor {
 		// Add capacity for colored output (permissions + metadata fields)
-		capacity += len(rows) * (len(placeholderPerms) + coloredColumns) * ansiPerField
+		capacity += len(rows) * (len(placeholderPerms) + coloredColumns) * maxAnsiSeqLen
 	}
 	// Add 2% buffer to reduce chance of reallocation
 	capacity += capacity / capacityBuffer
