@@ -53,6 +53,7 @@ Then run it with:
 - `-U, --no-sort`: Do not sort entries
 - `--no-color`: Do not colorize output
 
-## Todo
-
-- Media metadata: Add `-m/--media` flag to show metadata of media files (e.g., length)
+## TODO
+- [ ] **Performance**: Replace slice buffering with stream processing for entries  
+- [ ] **Performance**: Refactor tree view rendering to reduce memory usage  
+- [ ] **Feature**: Add `-m/--media` flag to show file metadata (e.g., media length)  
