@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+type sortableEntry struct {
+	entry    Entry
+	lower    string
+	extLower string
+}
+
 func sortEntries(entries []Entry) {
 	switch {
 	case cfg.Size:
@@ -26,9 +32,19 @@ func sortEntries(entries []Entry) {
 }
 
 func sortByName(entries []Entry) {
-	slices.SortStableFunc(entries, func(a, b Entry) int {
-		return cmp.Compare(strings.ToLower(a.Name()), strings.ToLower(b.Name()))
+	if len(entries) <= 1 {
+		return
+	}
+	sorted := make([]sortableEntry, len(entries))
+	for i, e := range entries {
+		sorted[i] = sortableEntry{entry: e, lower: strings.ToLower(e.Name())}
+	}
+	slices.SortStableFunc(sorted, func(a, b sortableEntry) int {
+		return cmp.Compare(a.lower, b.lower)
 	})
+	for i := range entries {
+		entries[i] = sorted[i].entry
+	}
 }
 
 func sortBySize(entries []Entry) {
@@ -44,26 +60,50 @@ func sortByTime(entries []Entry) {
 }
 
 func sortByKind(entries []Entry) {
-	slices.SortStableFunc(entries, func(a, b Entry) int {
-		if a.IsDir() && !b.IsDir() {
+	if len(entries) <= 1 {
+		return
+	}
+	sorted := make([]sortableEntry, len(entries))
+	for i, e := range entries {
+		sorted[i] = sortableEntry{entry: e, lower: strings.ToLower(e.Name())}
+	}
+	slices.SortStableFunc(sorted, func(a, b sortableEntry) int {
+		aDir, bDir := a.entry.IsDir(), b.entry.IsDir()
+		if aDir && !bDir {
 			return -1
 		}
-		if !a.IsDir() && b.IsDir() {
+		if !aDir && bDir {
 			return 1
 		}
-		return cmp.Compare(strings.ToLower(a.Name()), strings.ToLower(b.Name()))
+		return cmp.Compare(a.lower, b.lower)
 	})
+	for i := range entries {
+		entries[i] = sorted[i].entry
+	}
 }
 
 func sortByExt(entries []Entry) {
-	slices.SortStableFunc(entries, func(a, b Entry) int {
-		extA, extB := filepath.Ext(a.Name()), filepath.Ext(b.Name())
-		if extA != extB {
-			return cmp.Compare(extA, extB)
+	if len(entries) <= 1 {
+		return
+	}
+	sorted := make([]sortableEntry, len(entries))
+	for i, e := range entries {
+		name := e.Name()
+		sorted[i] = sortableEntry{
+			entry:    e,
+			lower:    strings.ToLower(name),
+			extLower: strings.ToLower(filepath.Ext(name)),
 		}
-		// If extensions are equal, fallback to name comparison
-		return cmp.Compare(strings.ToLower(a.Name()), strings.ToLower(b.Name()))
+	}
+	slices.SortStableFunc(sorted, func(a, b sortableEntry) int {
+		if a.extLower != b.extLower {
+			return cmp.Compare(a.extLower, b.extLower)
+		}
+		return cmp.Compare(a.lower, b.lower)
 	})
+	for i := range entries {
+		entries[i] = sorted[i].entry
+	}
 }
 
 func reverse(entries []Entry) {
